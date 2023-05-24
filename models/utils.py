@@ -149,7 +149,7 @@ def get_predict_fn(sde, model, train=False, continuous=True):
 
   elif isinstance(sde, methods.Poisson):
     # PFGM
-    def predict_fn(x, z):
+    def predict_fn(x, z, one_hot):
       # For PFGM, z is the augmented dimension
       normalized_poisson_field = model_fn(x, z, one_hot)
       return normalized_poisson_field

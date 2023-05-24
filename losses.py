@@ -99,7 +99,7 @@ so
     samples_batch = batch[: sde.config.training.small_batch_size]
     if labels is not None:
       labels_batch = labels[: sde.config.training.small_batch_size]
-      labels_one_hot_batch = one_hot_encode(labels_batch, num_classes=NUM_CLASSES)
+      labels_one_hot_batch = one_hot_encode(labels_batch, num_classes=sde.config.data.classes)
 
     m = torch.rand((samples_batch.shape[0],), device=samples_batch.device) * sde.M
     # Perturb the (augmented) mini-batch data
