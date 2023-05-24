@@ -134,8 +134,7 @@ class NCSNpp(nn.Module):
     else:
       raise ValueError(f'resblock type {resblock_type} unrecognized.')
 
-    # Downsampling block
-    channels = config.data.num_channels
+    channels = config.data.num_channels + config.data.classes
     if progressive_input != 'none':
       input_pyramid_ch = channels
 
@@ -233,7 +232,23 @@ class NCSNpp(nn.Module):
 
     self.all_modules = nn.ModuleList(modules)
 
-  def forward(self, x, cond):
+  def forward(self, x, cond, one_hot=None):
+
+    # Ensure one_hot is in the same device as x
+    one_hot = one_hot.to(x.device)
+
+    # Expand the dimensions of one_hot to match that of x
+    # Assuming x has shape (batch_size, channels, height, width)
+    # and one_hot has shape (batch_size, num_classes)
+    one_hot = one_hot.unsqueeze(-1).unsqueeze(-1)
+
+    # Repeat one_hot across the spatial dimensions
+    # so it has the same shape as x
+    one_hot = one_hot.expand(-1, -1, x.shape[2], x.shape[3])
+
+    # Concatenate the one-hot encodings to x along the channel dimension
+    x = torch.cat([x, one_hot], dim=1)
+
     # z (PFGM)/noise_level embedding; only for continuous training
     modules = self.all_modules
     m_idx = 0

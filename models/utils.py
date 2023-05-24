@@ -79,7 +79,7 @@ def get_model_fn(model, train=False):
     A model function.
   """
 
-  def model_fn(x, labels):
+  def model_fn(x, labels, one_hot_labels=None):
     """Compute the output of the PFGM / score-based model.
 
     Args:
@@ -92,10 +92,10 @@ def get_model_fn(model, train=False):
     """
     if not train:
       model.eval()
-      return model(x, labels)
+      return model(x, labels, one_hot_labels)
     else:
       model.train()
-      return model(x, labels)
+      return model(x, labels, one_hot_labels)
 
   return model_fn
 
@@ -151,7 +151,7 @@ def get_predict_fn(sde, model, train=False, continuous=True):
     # PFGM
     def predict_fn(x, z):
       # For PFGM, z is the augmented dimension
-      normalized_poisson_field = model_fn(x, z)
+      normalized_poisson_field = model_fn(x, z, one_hot)
       return normalized_poisson_field
   else:
     raise NotImplementedError(f"Method class {sde.__class__.__name__} not yet supported.")

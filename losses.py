@@ -18,6 +18,7 @@
 
 import torch
 import torch.optim as optim
+import torch.nn.functional
 import numpy as np
 from models import utils as mutils
 from methods import VESDE, VPSDE
@@ -28,6 +29,14 @@ from PIL import Image
 import cv2
 from torchvision import transforms
 from skimage.color import rgb2gray
+
+
+def one_hot_encode(labels, num_classes):
+  """
+  One-hot encodes the labels.
+  """
+  labels_one_hot = torch.nn.functional.one_hot(labels, num_classes=num_classes).to(labels.device)
+  return labels_one_hot
 
 def get_optimizer(config, params):
   """Returns a flax optimizer object based on `config`."""
@@ -76,7 +85,7 @@ def get_loss_fn(sde, train, reduce_mean=True, continuous=True, eps=1e-5, method_
 
   def loss_fn(model, batch, labels=None):
     """Compute the loss function.
-
+so
     Args:
       model: A PFGM or score model.
       batch: A mini-batch of training data.
@@ -84,16 +93,17 @@ def get_loss_fn(sde, train, reduce_mean=True, continuous=True, eps=1e-5, method_
     Returns:
       loss: A scalar that represents the average loss value across the mini-batch.
     """
-    labels_batch = None
+    labels_one_hot_batch = None
     samples_full = batch
     # Get the mini-batch with size `training.small_batch_size`
     samples_batch = batch[: sde.config.training.small_batch_size]
     if labels is not None:
       labels_batch = labels[: sde.config.training.small_batch_size]
+      labels_one_hot_batch = one_hot_encode(labels_batch, num_classes=NUM_CLASSES)
 
     m = torch.rand((samples_batch.shape[0],), device=samples_batch.device) * sde.M
     # Perturb the (augmented) mini-batch data
-    perturbed_samples_vec = utils_poisson.forward_pz(sde, sde.config, samples_batch, m, labels_batch)
+    perturbed_samples_vec = utils_poisson.forward_pz(sde, sde.config, samples_batch, m)
 
     with torch.no_grad():
       real_samples_vec = torch.cat(
@@ -121,11 +131,13 @@ def get_loss_fn(sde, train, reduce_mean=True, continuous=True, eps=1e-5, method_
     gt_direction *= np.sqrt(data_dim)
 
     target = gt_direction
+
+    #TODO : PASS THE LABELS TO THE PREDICT FUNCTION
     net_fn = mutils.get_predict_fn(sde, model, train=train, continuous=continuous)
 
     perturbed_samples_x = perturbed_samples_vec[:, :-1].view_as(samples_batch)
     perturbed_samples_z = torch.clamp(perturbed_samples_vec[:, -1], 1e-10)
-    net_x, net_z = net_fn(perturbed_samples_x, perturbed_samples_z)
+    net_x, net_z = net_fn(perturbed_samples_x, perturbed_samples_z, labels_one_hot_batch)
 
     net_x = net_x.view(net_x.shape[0], -1)
     # Predicted N+1-dimensional Poisson field

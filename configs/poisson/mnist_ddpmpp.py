@@ -39,6 +39,7 @@ def get_config():
   data.centered = False
   data.dataset = 'MNIST'
   data.image_size = 32
+  data.classes = 10
 
 
   # sampling
@@ -53,6 +54,7 @@ def get_config():
   sampling.upper_norm = 441
   # verbose
   sampling.vs = False
+  sampling.target = 0
 
   # model
   model = config.model

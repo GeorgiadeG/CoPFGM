@@ -710,7 +710,10 @@ def get_rk45_sampler_pfgm(sde, shape, inverse_scaler, rtol=1e-4, atol=1e-4,
         z = np.exp(t)
         net_fn = get_predict_fn(sde, model, train=False)
 
-        x_drift, z_drift = net_fn(x[:, :-1], torch.ones((len(x))).cuda() * z)
+        target = torch.nn.functional.one_hot(torch.tensor(sde.config.sampling.target), num_classes=sde.config.data.classes).float()
+        target = target.unsqueeze(0).repeat(len(x), 1)  # Repeat the target tensor for each sample
+
+        x_drift, z_drift = net_fn(x[:, :-1], torch.ones((len(x))).cuda() * z, target)
         x_drift = x_drift.view(len(x_drift), -1)
 
         # Substitute the predicted z with the ground-truth
