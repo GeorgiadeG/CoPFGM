@@ -50,7 +50,15 @@ class NCSNpp(nn.Module):
     resamp_with_conv = config.model.resamp_with_conv
     self.num_resolutions = num_resolutions = len(ch_mult)
     self.all_resolutions = all_resolutions = [config.data.image_size // (2 ** i) for i in range(num_resolutions)]
-
+    self.conv1_train = nn.Conv2d(
+      in_channels=config.training.small_batch_size * config.data.num_channels * config.data.image_size * config.data.image_size + config.training.small_batch_size * config.data.num_channels * config.data.classes,
+      out_channels=config.training.small_batch_size * config.data.num_channels * config.data.image_size * config.data.image_size,
+      kernel_size=3)
+    self.conv1_test = nn.Conv2d(
+      in_channels=config.eval.batch_size * config.data.num_channels * config.data.image_size * config.data.image_size + config.eval.batch_size * config.data.num_channels * config.data.classes,
+      out_channels=config.eval.batch_size * config.data.num_channels * config.data.image_size * config.data.image_size,
+        kernel_size=3)
+    self.small_batch_size = config.training.small_batch_size
     self.conditional = conditional = config.model.conditional  # noise-conditional
     fir = config.model.fir
     fir_kernel = config.model.fir_kernel
@@ -134,7 +142,8 @@ class NCSNpp(nn.Module):
     else:
       raise ValueError(f'resblock type {resblock_type} unrecognized.')
 
-    channels = config.data.num_channels + config.data.classes
+    # channels = config.data.num_channels + config.data.classes
+    channels = config.data.num_channels
     if progressive_input != 'none':
       input_pyramid_ch = channels
 
@@ -234,20 +243,50 @@ class NCSNpp(nn.Module):
 
   def forward(self, x, cond, one_hot=None):
 
-    # Ensure one_hot is in the same device as x
-    one_hot = one_hot.to(x.device)
+    # # Ensure one_hot is in the same device as x
+    # one_hot = one_hot.to(x.device)
+    #
+    # # Expand the dimensions of one_hot to match that of x
+    # # Assuming x has shape (batch_size, channels, height, width)
+    # # and one_hot has shape (batch_size, num_classes)
+    # one_hot = one_hot.unsqueeze(-1).unsqueeze(-1)
+    #
+    # # Repeat one_hot across the spatial dimensions
+    # # so it has the same shape as x
+    # one_hot = one_hot.expand(-1, -1, x.shape[2], x.shape[3])
+    #
+    # # Concatenate the one-hot encodings to x along the channel dimension
+    # x = torch.cat([x, one_hot], dim=1)
 
-    # Expand the dimensions of one_hot to match that of x
-    # Assuming x has shape (batch_size, channels, height, width)
-    # and one_hot has shape (batch_size, num_classes)
-    one_hot = one_hot.unsqueeze(-1).unsqueeze(-1)
+    # TODO: have two convolutions, one for training batch size and one for sampling batch size
+    # and use the appropriate one, check the first dimension of x
+    # self.conv1 = nn.Conv2d(in_channels=x.shape[0]*x.shape[1]*x.shape[2]*x.shape[3] + config.data.classes * x.shape[0] * x.shape[1],
+    #                        out_channels=x.shape[0]*x.shape[1]*x.shape[2]*x.shape[3] ,
+    #                        kernel_size=3)
 
-    # Repeat one_hot across the spatial dimensions
-    # so it has the same shape as x
-    one_hot = one_hot.expand(-1, -1, x.shape[2], x.shape[3])
+    # One-hot preprocessing
+    batch_size, num_channels, img_height, img_width = x.size()
 
-    # Concatenate the one-hot encodings to x along the channel dimension
-    x = torch.cat([x, one_hot], dim=1)
+    # Original one_hot shape: (batch_size, one_hot_length)
+    one_hot_expanded = one_hot.unsqueeze(1)  # Shape: (batch_size, 1, one_hot_length)
+
+    # Repeat one_hot for each channel
+    one_hot_repeated = one_hot_expanded.repeat(1, num_channels, 1)  # Shape: (batch_size, num_channels, one_hot_length)
+
+    # Add an extra dimension to match the 4D shape of x, and expand across height
+    one_hot_expanded_4d = one_hot_repeated.unsqueeze(2).expand(-1, -1, img_height,
+                                                               -1)  # Shape: (batch_size, num_channels, img_height, one_hot_length)
+
+    # Concatenate x and one_hot_expanded_4d along the width dimension
+    new_x = torch.cat([x, one_hot_expanded_4d],
+                      dim=3)  # Shape: (batch_size, num_channels, img_height, img_width + one_hot_length)
+
+    # Pass new_x through the convolutional layer
+    # new_x = self.conv1(new_x)
+    if x.size(0) == self.small_batch_size:
+      x = self.conv1_train(new_x)
+    else:
+      x = self.conv1_test(new_x)
 
     # z (PFGM)/noise_level embedding; only for continuous training
     modules = self.all_modules
