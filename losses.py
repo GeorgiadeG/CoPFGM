@@ -29,6 +29,8 @@ from PIL import Image
 import cv2
 from torchvision import transforms
 from skimage.color import rgb2gray
+from torchvision.utils import save_image
+from pytorch_msssim import ssim
 
 
 def one_hot_encode(labels, num_classes):
@@ -83,7 +85,7 @@ def get_loss_fn(sde, train, reduce_mean=True, continuous=True, eps=1e-5, method_
   """
   reduce_op = torch.mean if reduce_mean else lambda *args, **kwargs: 0.5 * torch.sum(*args, **kwargs)
 
-  def loss_fn(model, batch, labels=None):
+  def loss_fn(model, batch, labels=None, step=None):
     """Compute the loss function.
 so
     Args:
@@ -139,12 +141,21 @@ so
     perturbed_samples_z = torch.clamp(perturbed_samples_vec[:, -1], 1e-10)
     net_x, net_z = net_fn(perturbed_samples_x, perturbed_samples_z, labels_one_hot_batch)
 
+    step_count = step // sde.config.training.similarity_step_freq
+
+    predicted_images = perturbed_samples_x + net_x
+
+    actual_images = samples_batch
+
+    ssim_loss = 1 - ssim(predicted_images, actual_images, data_range=1.0)
+
     net_x = net_x.view(net_x.shape[0], -1)
     # Predicted N+1-dimensional Poisson field
     net = torch.cat([net_x, net_z[:, None]], dim=1)
     loss = ((net - target) ** 2)
     loss = reduce_op(loss.reshape(loss.shape[0], -1), dim=-1)
-    loss = torch.mean(loss)
+
+    loss = torch.mean(loss + step_count * sde.config.training.similarity_rate * ssim_loss)
 
     return loss
 
@@ -168,7 +179,7 @@ def get_step_fn(sde, train, optimize_fn=None, reduce_mean=False, method_name=Non
   loss_fn = get_loss_fn(sde, train, reduce_mean=reduce_mean,
                             continuous=True, method_name=method_name)
 
-  def step_fn(state, batch, labels=None):
+  def step_fn(state, batch, labels=None, steps=None):
     """Running one step of training or evaluation.
 
     This function will undergo `jax.lax.scan` so that multiple steps can be pmapped and jit-compiled together
@@ -186,7 +197,7 @@ def get_step_fn(sde, train, optimize_fn=None, reduce_mean=False, method_name=Non
     if train:
       optimizer = state['optimizer']
       optimizer.zero_grad()
-      loss = loss_fn(model, batch, labels=labels)
+      loss = loss_fn(model, batch, labels=labels, step=steps)
       loss.backward()
       optimize_fn(optimizer, model.parameters(), step=state['step'])
       state['step'] += 1
@@ -196,7 +207,7 @@ def get_step_fn(sde, train, optimize_fn=None, reduce_mean=False, method_name=Non
         ema = state['ema']
         ema.store(model.parameters())
         ema.copy_to(model.parameters())
-        loss = loss_fn(model, batch, labels=labels)
+        loss = loss_fn(model, batch, labels=labels, step=steps)
         ema.restore(model.parameters())
 
     return loss

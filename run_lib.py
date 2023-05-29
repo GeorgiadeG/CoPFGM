@@ -148,7 +148,7 @@ def train(config, workdir):
     batch = scaler(batch)
 
     # Execute one training step
-    loss = train_step_fn(state, batch,label_batch)
+    loss = train_step_fn(state, batch,label_batch, step)
 
     if step % config.training.log_freq == 0:
       logging.info("step: %d, training_loss: %.5e" % (step, loss.item()))
@@ -163,7 +163,7 @@ def train(config, workdir):
       eval_batch = torch.from_numpy(next(eval_iter)['image']._numpy()).to(config.device).float()
       eval_batch = eval_batch.permute(0, 3, 1, 2)
       eval_batch = scaler(eval_batch)
-      eval_loss = eval_step_fn(state, eval_batch, label_batch)
+      eval_loss = eval_step_fn(state, eval_batch, label_batch, step)
       logging.info("step: %d, eval_loss: %.5e" % (step, eval_loss.item()))
       writer.add_scalar("eval_loss", eval_loss.item(), step)
 

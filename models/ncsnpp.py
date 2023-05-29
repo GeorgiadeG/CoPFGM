@@ -50,14 +50,57 @@ class NCSNpp(nn.Module):
     resamp_with_conv = config.model.resamp_with_conv
     self.num_resolutions = num_resolutions = len(ch_mult)
     self.all_resolutions = all_resolutions = [config.data.image_size // (2 ** i) for i in range(num_resolutions)]
-    self.conv1_train = nn.Conv2d(
-      in_channels=config.training.small_batch_size * config.data.num_channels * config.data.image_size * config.data.image_size + config.training.small_batch_size * config.data.num_channels * config.data.classes,
-      out_channels=config.training.small_batch_size * config.data.num_channels * config.data.image_size * config.data.image_size,
-      kernel_size=3)
-    self.conv1_test = nn.Conv2d(
-      in_channels=config.eval.batch_size * config.data.num_channels * config.data.image_size * config.data.image_size + config.eval.batch_size * config.data.num_channels * config.data.classes,
-      out_channels=config.eval.batch_size * config.data.num_channels * config.data.image_size * config.data.image_size,
-        kernel_size=3)
+    # all_resolutions.insert(0, config.data.image_size+1)
+
+    self.num_channels = config.data.num_channels
+    self.num_classes = config.data.classes
+    self.img_size = config.data.image_size
+
+
+    # n = config.training.small_batch_size * config.data.num_channels * config.data.classes
+    # self.conv1 = nn.Conv2d(in_channels=config.data.num_channels,out_channels=config.data.num_channels
+    #                             ,kernel_size=(1, config.data.classes+1))
+    # self.conv1 = nn.Conv2d(config.data.num_channels + config.data.classes, config.data.num_channels, 1)
+
+    # A Conv2D layer with a kernel size of (1, num_classes+1) to transform the concatenated tensor back to original width
+    # self.conv1 = nn.Conv2d(num_channels, num_channels, (1, num_classes + 1), stride=0, pad)
+
+    # m = config.eval.batch_size * config.data.num_channels * config.data.classes
+    # self.conv1_train = nn.Conv1d(in_channels=1,out_channels=1,kernel_size=m+1,stride=1)
+    # self.conv1 = nn.Conv1d(1, 1, kernel_size=num_classes + 1, stride=num_classes + 1, bias=False)
+    # self.fc1 = nn.Linear(num_channels * img_height * img_width + num_classes * num_channels,
+    #                      num_channels * img_height * img_width)
+
+    # self.linear = nn.Linear(self.img_size ** 2 + self.num_classes, self.img_size ** 2)
+
+    # self.combine = Combine(self.num_channels, self.num_classes, method='cat')
+    # self.downsample = conv1x1(self.num_channels + self.num_classes, self.num_channels)
+
+    # For sparl_cc
+    self.conv1 = nn.Conv2d(self.num_channels + self.num_classes, self.num_channels, kernel_size=1)
+
+    # For sparl_ewad
+    # self.proj = nn.Conv2d(self.num_classes, self.num_channels, kernel_size=1)
+
+    # For class conditional batch norm
+    # self.fc = nn.Linear(self.num_classes, self.num_classes * self.img_size * self.img_size)
+    # self.conv1 = nn.Conv2d(self.num_channels + self.num_classes, self.num_channels, kernel_size=1)
+
+    # For adain
+    # self.class_embedding = ClassEmbedding(self.num_classes, self.num_channels)
+
+    # Conditional Batch Normalization
+    # self.bn1 = ConditionalBatchNorm(self.num_channels, self.num_classes)
+
+    # self.resnet_block = ResnetBlockOneHot(act=nn.ReLU(), in_ch=self.num_channels, zemb_dim=self.num_classes)
+
+    # Define CNN layers
+    # self.conv1 = nn.Conv2d(self.num_channels, 64, kernel_size=3, padding=1)
+    # self.conv2 = nn.Conv2d(64, self.num_channels, kernel_size=3, padding=1)
+
+    # Define additional FC layer for one-hot vectors
+    # self.fc_one_hot = nn.Linear(self.num_classes, self.img_size * self.img_size)
+
     self.small_batch_size = config.training.small_batch_size
     self.conditional = conditional = config.model.conditional  # noise-conditional
     fir = config.model.fir
@@ -241,7 +284,7 @@ class NCSNpp(nn.Module):
 
     self.all_modules = nn.ModuleList(modules)
 
-  def forward(self, x, cond, one_hot=None):
+  def forward(self, x, cond, labels=None):
 
     # # Ensure one_hot is in the same device as x
     # one_hot = one_hot.to(x.device)
@@ -258,35 +301,65 @@ class NCSNpp(nn.Module):
     # # Concatenate the one-hot encodings to x along the channel dimension
     # x = torch.cat([x, one_hot], dim=1)
 
-    # TODO: have two convolutions, one for training batch size and one for sampling batch size
-    # and use the appropriate one, check the first dimension of x
-    # self.conv1 = nn.Conv2d(in_channels=x.shape[0]*x.shape[1]*x.shape[2]*x.shape[3] + config.data.classes * x.shape[0] * x.shape[1],
-    #                        out_channels=x.shape[0]*x.shape[1]*x.shape[2]*x.shape[3] ,
-    #                        kernel_size=3)
+    # batch_size, num_channels, img_height, img_width = x.size()
+    #
+    # # Expand dimensions of one_hot to match with input tensor x.
+    # one_hot_expanded = one_hot.view(batch_size, 1, 1, -1).repeat(1, num_channels, 1, 1)
+    #
+    # # Now, one_hot_expanded has size [batch_size, num_channels, 1, num_classes]
+    #
+    # # Then, expand the dimensions to match the height of image
+    # one_hot_expanded = one_hot_expanded.expand(-1, -1, img_height, -1)
+    #
+    # # Now, one_hot_expanded has size [batch_size, num_channels, img_height, num_classes]
+    #
+    # # Concatenate x and one_hot_expanded along the width dimension
+    # new_x = torch.cat([x, one_hot_expanded], dim=3)
+    #
+    # x = self.conv1_test(new_x)
 
-    # One-hot preprocessing
-    batch_size, num_channels, img_height, img_width = x.size()
+    # # Reshape the input tensor to 2D: (batch_size * num_channels, img_size^2)
+    # batch_size = x.shape[0]
+    # x = x.reshape(batch_size * self.num_channels, -1)
+    #
+    # # Repeat and reshape the labels to match x's first dimension
+    # one_hot = one_hot.repeat(1, self.num_channels).view(-1, self.num_classes)
+    #
+    # # Concatenate the reshaped input and one-hot labels
+    # x = torch.cat([x, one_hot], dim=1)
+    #
+    # # Use a linear layer to scale down to (batch_size*num_channels, img_size^2)
+    # x = self.linear(x)
+    #
+    # # Reshape it to the initial format
+    # x = x.view(batch_size, self.num_channels, self.img_size, self.img_size)
 
-    # Original one_hot shape: (batch_size, one_hot_length)
-    one_hot_expanded = one_hot.unsqueeze(1)  # Shape: (batch_size, 1, one_hot_length)
+    # x = self.bn1(x, labels)
+    # x = F.pad(x, (0,1,0,1))
 
-    # Repeat one_hot for each channel
-    one_hot_repeated = one_hot_expanded.repeat(1, num_channels, 1)  # Shape: (batch_size, num_channels, one_hot_length)
+    # x = self.resnet_block(x.float(), labels.float())
 
-    # Add an extra dimension to match the 4D shape of x, and expand across height
-    one_hot_expanded_4d = one_hot_repeated.unsqueeze(2).expand(-1, -1, img_height,
-                                                               -1)  # Shape: (batch_size, num_channels, img_height, one_hot_length)
+    # x = self.sparl_ew(x, labels, op='mul')
 
-    # Concatenate x and one_hot_expanded_4d along the width dimension
-    new_x = torch.cat([x, one_hot_expanded_4d],
-                      dim=3)  # Shape: (batch_size, num_channels, img_height, img_width + one_hot_length)
+    # # CNN forward pass
+    # x = F.relu(self.conv1(x))
+    # x = self.conv2(x)
+    #
+    # # One-hot forward pass
+    # one_hot = F.relu(self.fc_one_hot(labels.float()))
+    #
+    # # Reshape one-hot to have same dimensions as feature map
+    # one_hot = one_hot.view(one_hot.size(0), 1, x.size(2), x.size(3))
+    #
+    # # Add (or multiply) one-hot representations to feature maps
+    # x = x + one_hot
 
-    # Pass new_x through the convolutional layer
-    # new_x = self.conv1(new_x)
-    if x.size(0) == self.small_batch_size:
-      x = self.conv1_train(new_x)
-    else:
-      x = self.conv1_test(new_x)
+    x = self.sparl_cc(x, labels)
+
+    # assert x.shape[0] == batch_size
+    assert x.shape[1] == self.num_channels
+    assert x.shape[2] == self.img_size
+    assert x.shape[3] == self.img_size
 
     # z (PFGM)/noise_level embedding; only for continuous training
     modules = self.all_modules
@@ -450,3 +523,120 @@ class NCSNpp(nn.Module):
       return h[:, :-1], scalar.reshape(len(scalar))
     else:
       return h
+
+  # Spatial Replication of Labels + Concatenation + Convolution
+  def sparl_cc(self, x, labels):
+    assert labels is not None, "Labels must be provided for sparl_cc"
+    """
+    Spatial Replication of Labels + Concatenation + Convolution
+    :param x: input tensor
+    :param labels: labels tensor
+    :return: output tensor
+    """
+    # reshape labels from (batch_size, num_classes) to (batch_size, num_classes, 1, 1)
+    labels = labels.view(labels.size(0), labels.size(1), 1, 1)
+
+    # repeat labels tensor to match the spatial dimensions of x
+    labels = labels.repeat(1, 1, x.size(2), x.size(3))
+
+    # concatenate labels tensor with x along the channels dimension
+    combined = torch.cat([x, labels], dim=1)
+
+    # scale down the number of channels using the 1x1 convolution layer
+    return self.conv1(combined)
+
+  # Spatial Replication of Labels + Element-wise Addition/Multiplication:
+  def sparl_ew(self, x, labels, op='add'):
+    assert labels is not None, "Labels must be provided for sparl_ew"
+    """
+    Spatial Replication of Labels + Element-wise Addition/Multiplication
+    :param x: input tensor
+    :param labels: labels tensor
+    :return: output tensor
+    """
+    # reshape labels from (batch_size, num_classes) to (batch_size, num_classes, 1, 1)
+    labels = labels.view(labels.size(0), labels.size(1), 1, 1)
+
+    # repeat labels tensor to match the spatial dimensions of x
+    labels = labels.repeat(1, 1, x.size(2), x.size(3))
+
+    # element-wise addition/multiplication
+    labels_proj = self.proj(labels.float())
+
+    if op == 'add':
+        return x + labels_proj
+    elif op == 'mul':
+        return x * labels_proj
+    else:
+        raise ValueError(f'{op} is not a valid name for Spatial '
+                         f'Replication of Labels + '
+                         f'Element-wise Addition/Multiplication:')
+
+  # Class-conditional Batch Normalization:
+  def cc_bn(self, x, labels):
+    assert labels is not None, "Labels must be provided for cc_bn"
+    """
+    Class-conditional Batch Normalization
+    :param x: input tensor
+    :param labels: labels tensor
+    :return: output tensor
+    """
+    labels = labels.float()
+    # reshape labels from (batch_size, num_classes) to (batch_size, num_channels*img_sz*img_sz)
+    labels = self.fc(labels)
+
+    # reshape labels to match the spatial dimensions of x
+    labels = labels.view(-1, self.num_classes, self.img_size, self.img_size)
+
+    x_and_labels = torch.cat([x, labels], dim=1)
+
+    return self.conv1(x_and_labels)
+
+  # Adaptive Instance Normalization (AdaIN):
+  def adain(self, x, labels):
+    assert labels is not None, "Labels must be provided for adain"
+    """
+    Adaptive Instance Normalization (AdaIN)
+    :param x: input tensor
+    :param labels: labels tensor
+    :return: output tensor
+    """
+    labels = self.class_embedding(labels)  # shape: (batch_size, num_channels)
+
+    # Expand labels to match the spatial dimensions of x
+    labels = labels.unsqueeze(-1).unsqueeze(-1)  # shape: (batch_size, num_channels, 1, 1)
+    labels = labels.expand(-1, -1, x.size(2), x.size(3))  # shape: (batch_size, num_channels, img_sz, img_sz)
+
+    # Add the label embeddings to x along the channel dimension
+    return x + labels  # shape: (batch_size, num_channels, img_sz, img_sz)
+
+class ClassEmbedding(nn.Module):
+  def __init__(self, num_classes, num_channels):
+    super(ClassEmbedding, self).__init__()
+    self.fc = nn.Linear(num_classes, num_channels)
+
+  def forward(self, labels):
+    # Embed the labels to the same space as channels
+    labels = labels.float()
+    labels = self.fc(labels)  # shape: (batch_size, num_channels)
+
+    # The labels are now in the same space as your image tensor's channel dimension.
+    # You can add them to your image tensor along the channel dimension.
+
+    return labels
+
+class ConditionalBatchNorm(nn.Module):
+  def __init__(self, num_features, num_classes):
+    super().__init__()
+    self.num_features = num_features
+    self.bn = nn.BatchNorm2d(num_features, affine=False)
+    self.embed = nn.Linear(num_classes, num_features * 2)
+    self.embed.weight.data[:, :num_features].fill_(1.)  # Initialize scale to 1
+    self.embed.weight.data[:, num_features:].zero_()  # Initialize bias at 0
+
+  def forward(self, x, y):
+    out = self.bn(x)
+    y = y.float()  # ensure y is float
+    gamma, beta = self.embed(y).chunk(2, 1)
+    out = gamma.view(-1, self.num_features, 1, 1) * out + beta.view(-1, self.num_features, 1, 1)
+    return out
