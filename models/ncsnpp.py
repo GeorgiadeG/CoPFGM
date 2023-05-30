@@ -77,7 +77,7 @@ class NCSNpp(nn.Module):
     # self.downsample = conv1x1(self.num_channels + self.num_classes, self.num_channels)
 
     # For sparl_cc
-    self.conv1 = nn.Conv2d(self.num_channels + self.num_classes, self.num_channels, kernel_size=1)
+    # self.conv1 = nn.Conv2d(self.num_channels + self.num_classes, self.num_channels, kernel_size=1)
 
     # For sparl_ewad
     # self.proj = nn.Conv2d(self.num_classes, self.num_channels, kernel_size=1)
@@ -186,7 +186,8 @@ class NCSNpp(nn.Module):
       raise ValueError(f'resblock type {resblock_type} unrecognized.')
 
     # channels = config.data.num_channels + config.data.classes
-    channels = config.data.num_channels
+    channels = config.data.num_channels+1
+    # channels = config.data.num_channels
     if progressive_input != 'none':
       input_pyramid_ch = channels
 
@@ -318,12 +319,12 @@ class NCSNpp(nn.Module):
     #
     # x = self.conv1_test(new_x)
 
-    # # Reshape the input tensor to 2D: (batch_size * num_channels, img_size^2)
+    # Reshape the input tensor to 2D: (batch_size * num_channels, img_size^2)
     # batch_size = x.shape[0]
     # x = x.reshape(batch_size * self.num_channels, -1)
     #
     # # Repeat and reshape the labels to match x's first dimension
-    # one_hot = one_hot.repeat(1, self.num_channels).view(-1, self.num_classes)
+    # one_hot = labels.repeat(1, self.num_channels).view(-1, self.num_classes)
     #
     # # Concatenate the reshaped input and one-hot labels
     # x = torch.cat([x, one_hot], dim=1)
@@ -354,12 +355,20 @@ class NCSNpp(nn.Module):
     # # Add (or multiply) one-hot representations to feature maps
     # x = x + one_hot
 
-    x = self.sparl_cc(x, labels)
+    # x = self.sparl_cc(x, labels)
+
+    extra_channel = torch.zeros(x.shape[0], 1, self.img_size, self.img_size).to(x.device)
+
+    for i in range(x.shape[0]):
+      for j in range(x.shape[2]):
+        extra_channel[i, 0, j, -self.num_classes:] = labels[i]
+
+    x = torch.cat([x, extra_channel], dim=1)
 
     # assert x.shape[0] == batch_size
-    assert x.shape[1] == self.num_channels
-    assert x.shape[2] == self.img_size
-    assert x.shape[3] == self.img_size
+    # assert x.shape[1] == self.num_channels
+    # assert x.shape[2] == self.img_size
+    # assert x.shape[3] == self.img_size
 
     # z (PFGM)/noise_level embedding; only for continuous training
     modules = self.all_modules

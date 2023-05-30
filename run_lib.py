@@ -46,6 +46,7 @@ from torch import nn
 from torchvision import models
 from utils import save_checkpoint, restore_checkpoint
 import datasets_utils.celeba
+from classifiers.mnist_classifier import MNIST_Classifier
 
 FLAGS = flags.FLAGS
 gpus = tf.config.list_physical_devices('GPU')
@@ -71,6 +72,34 @@ def save_images_and_labels(image_batch, label_batch, output_dir='output_images')
         filename = f"index_{idx}_label_{label}.png"
         filepath = os.path.join(output_dir, filename)
         plt.imsave(filepath, image)
+
+def get_classifier_pred_fn(dataset):
+  if dataset=='mnist':
+    return train_mnist_classifier.predict
+def train_mnist_classifier():
+  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+  mnist_classifier = MNIST_Classifier(device)
+
+  transform = transforms.Compose([
+    transforms.Resize((32, 32)),  # resize to 32x32
+    transforms.Grayscale(num_output_channels=3),  # convert to RGB
+    transforms.ToTensor()  # convert to tensor
+  ])
+
+  # Load the datasets with ImageFolder
+  train_dataset = datasets.MNIST(root='~/torch_datasets', train=True, transform=transform, download=True)
+  test_dataset = datasets.MNIST(root='~/torch_datasets', train=False, transform=transform, download=True)
+
+  # Define a loader for the training data we can iterate through in 64-image batches
+  train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+  test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+  for epoch in range(1, 5):
+    mnist_classifier.train(train_loader, epoch)
+    mnist_classifier.test(test_loader)
+
+  return mnist_classifier
 
 def train(config, workdir):
   """Runs the training pipeline.
@@ -105,11 +134,12 @@ def train(config, workdir):
   state = restore_checkpoint(checkpoint_meta_dir, state, config.device)
   initial_step = int(state['step'])
 
-
   train_ds, eval_ds, _ = datasets.get_dataset(config, uniform_dequantization=config.data.uniform_dequantization)
 
   train_iter = iter(train_ds)  # pytype: disable=wrong-arg-types
   eval_iter = iter(eval_ds)  # pytype: disable=wrong-arg-types
+
+  pred_fn = get_classifier_pred_fn('mnist')
 
   # Create data normalizer and its inverse
   scaler = datasets.get_data_scaler(config)

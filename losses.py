@@ -85,7 +85,7 @@ def get_loss_fn(sde, train, reduce_mean=True, continuous=True, eps=1e-5, method_
   """
   reduce_op = torch.mean if reduce_mean else lambda *args, **kwargs: 0.5 * torch.sum(*args, **kwargs)
 
-  def loss_fn(model, batch, labels=None, step=None):
+  def loss_fn(model, batch, labels=None, step=None, pred_fn=None):
     """Compute the loss function.
 so
     Args:
@@ -95,13 +95,12 @@ so
     Returns:
       loss: A scalar that represents the average loss value across the mini-batch.
     """
-    labels_one_hot_batch = None
     samples_full = batch
     # Get the mini-batch with size `training.small_batch_size`
     samples_batch = batch[: sde.config.training.small_batch_size]
-    if labels is not None:
-      labels_batch = labels[: sde.config.training.small_batch_size]
-      labels_one_hot_batch = one_hot_encode(labels_batch, num_classes=sde.config.data.classes)
+    # if labels is not None:
+    labels_batch = labels[: sde.config.training.small_batch_size]
+    labels_one_hot_batch = one_hot_encode(labels_batch, num_classes=sde.config.data.classes)
 
     m = torch.rand((samples_batch.shape[0],), device=samples_batch.device) * sde.M
     # Perturb the (augmented) mini-batch data
@@ -141,13 +140,28 @@ so
     perturbed_samples_z = torch.clamp(perturbed_samples_vec[:, -1], 1e-10)
     net_x, net_z = net_fn(perturbed_samples_x, perturbed_samples_z, labels_one_hot_batch)
 
-    step_count = step // sde.config.training.similarity_step_freq
+    # step_count = step // sde.config.training.similarity_step_freq
 
     predicted_images = perturbed_samples_x + net_x
 
-    actual_images = samples_batch
+    pred_labels = pred_fn(predicted_images)
 
-    ssim_loss = 1 - ssim(predicted_images, actual_images, data_range=1.0)
+    # check if the predicted labels are correct as the batch labels
+    correct_cnt = 0
+
+    # tensor of just 1s with length of the batch
+    pred_tensor = torch.ones(len(pred_labels)).to(pred_labels.device)
+
+    for i in range(predicted_images.shape[0]):
+        if pred_labels[i] == labels_batch[i]:
+            correct_cnt += 1
+            pred_tensor[i] = 0
+
+    print("Accuracy count: ", correct_cnt/len(predicted_images))
+
+    # actual_images = samples_batch
+
+    # ssim_loss = 1 - ssim(predicted_images, actual_images, data_range=1.0)
 
     net_x = net_x.view(net_x.shape[0], -1)
     # Predicted N+1-dimensional Poisson field
@@ -155,7 +169,13 @@ so
     loss = ((net - target) ** 2)
     loss = reduce_op(loss.reshape(loss.shape[0], -1), dim=-1)
 
-    loss = torch.mean(loss + step_count * sde.config.training.similarity_rate * ssim_loss)
+    # TODO : ADD THE SSIM LOSS
+    # if step_count > 20:
+    #   step_count = 20
+
+    # loss = torch.mean(loss + step_count * sde.config.training.similarity_rate * ssim_loss)
+    loss = torch.mean(torc.mul(loss, pred_tensor))
+
 
     return loss
 
@@ -179,7 +199,7 @@ def get_step_fn(sde, train, optimize_fn=None, reduce_mean=False, method_name=Non
   loss_fn = get_loss_fn(sde, train, reduce_mean=reduce_mean,
                             continuous=True, method_name=method_name)
 
-  def step_fn(state, batch, labels=None, steps=None):
+  def step_fn(state, batch, labels=None, steps=None, pred_fn=None):
     """Running one step of training or evaluation.
 
     This function will undergo `jax.lax.scan` so that multiple steps can be pmapped and jit-compiled together
@@ -197,7 +217,7 @@ def get_step_fn(sde, train, optimize_fn=None, reduce_mean=False, method_name=Non
     if train:
       optimizer = state['optimizer']
       optimizer.zero_grad()
-      loss = loss_fn(model, batch, labels=labels, step=steps)
+      loss = loss_fn(model, batch, labels=labels, step=steps,pred_fn=pred_fn)
       loss.backward()
       optimize_fn(optimizer, model.parameters(), step=state['step'])
       state['step'] += 1
@@ -207,7 +227,7 @@ def get_step_fn(sde, train, optimize_fn=None, reduce_mean=False, method_name=Non
         ema = state['ema']
         ema.store(model.parameters())
         ema.copy_to(model.parameters())
-        loss = loss_fn(model, batch, labels=labels, step=steps)
+        loss = loss_fn(model, batch, labels=labels, step=steps,pred_fn=pred_fn)
         ema.restore(model.parameters())
 
     return loss
