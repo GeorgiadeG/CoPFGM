@@ -33,7 +33,8 @@ def get_config():
   training.model = 'ddpmpp'
   training.M = 226
   training.similarity_step_freq = 1000
-  training.similarity_rate = 0.2
+  training.similarity_rate = 1.2
+  training.xi = 2.5
 
   # data
   data = config.data

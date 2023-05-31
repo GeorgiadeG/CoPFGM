@@ -30,7 +30,7 @@ import cv2
 from torchvision import transforms
 from skimage.color import rgb2gray
 from torchvision.utils import save_image
-from pytorch_msssim import ssim
+from torch.nn import functional as F
 
 
 def one_hot_encode(labels, num_classes):
@@ -39,6 +39,22 @@ def one_hot_encode(labels, num_classes):
   """
   labels_one_hot = torch.nn.functional.one_hot(labels, num_classes=num_classes).to(labels.device)
   return labels_one_hot
+
+def visualize_predictions(input_tensor, predictions, save_dir):
+  if not os.path.exists(save_dir):
+    os.makedirs(save_dir)
+
+  input_tensor = input_tensor.cpu().numpy()  # Move the tensor to CPU and convert to numpy array
+  predictions = predictions.cpu().numpy()  # Move the predictions to CPU and convert to numpy array
+  num_images = input_tensor.shape[0]
+
+  for i in range(num_images):
+    plt.figure(figsize=(2, 2))
+    plt.title(f'Predicted: {predictions[i]}')
+    plt.imshow(input_tensor[i].transpose((1, 2, 0)))  # Change from (C, H, W) to (H, W, C)
+    plt.axis('off')
+    plt.savefig(os.path.join(save_dir, f'image_{i}.png'))  # Save the figure
+    plt.close()  # Close the figure to free up memory
 
 def get_optimizer(config, params):
   """Returns a flax optimizer object based on `config`."""
@@ -141,23 +157,33 @@ so
     net_x, net_z = net_fn(perturbed_samples_x, perturbed_samples_z, labels_one_hot_batch)
 
     # step_count = step // sde.config.training.similarity_step_freq
+    torch.autograd.set_detect_anomaly(True)
 
     predicted_images = perturbed_samples_x + net_x
 
     pred_labels = pred_fn(predicted_images)
 
-    # check if the predicted labels are correct as the batch labels
-    correct_cnt = 0
+    correct_cnt = predicted_images.shape[0] - torch.sum(pred_labels == labels_batch)
 
-    # tensor of just 1s with length of the batch
-    pred_tensor = torch.ones(len(pred_labels)).to(pred_labels.device)
+    new_pred_tensor = torch.ones(len(pred_labels)).to(pred_labels.device)
 
     for i in range(predicted_images.shape[0]):
-        if pred_labels[i] == labels_batch[i]:
-            correct_cnt += 1
-            pred_tensor[i] = 0
+      if pred_labels[i] != labels_batch[i]:
+        temp = m[i] / sde.M
+      else:
+        temp = 1
+      temp *= (1+F.mse_loss(predicted_images[i], samples_batch[i]))
+      # new_val = new_val * new_val
 
-    print("Accuracy count: ", correct_cnt/len(predicted_images))
+      new_pred_tensor[i] = temp
+
+    pred_tensor = new_pred_tensor
+
+    # visualize_predictions(predicted_images,  pred_labels, "eval/save" )
+
+    # print("Accuracy count: ", correct_cnt)
+    # print("pred_labels: ", pred_labels)
+    # print("labels_batch: ", labels_batch)
 
     # actual_images = samples_batch
 
@@ -169,13 +195,15 @@ so
     loss = ((net - target) ** 2)
     loss = reduce_op(loss.reshape(loss.shape[0], -1), dim=-1)
 
-    # TODO : ADD THE SSIM LOSS
     # if step_count > 20:
     #   step_count = 20
 
     # loss = torch.mean(loss + step_count * sde.config.training.similarity_rate * ssim_loss)
-    loss = torch.mean(torc.mul(loss, pred_tensor))
-
+    # if step < 2000:
+    #     loss = torch.mean(loss)
+    # else:
+    loss = torch.mean(torch.mul(loss, pred_tensor))
+    # loss *= (1 + (1 - (correct_cnt / len(pred_labels))))**sde.config.training.xi
 
     return loss
 

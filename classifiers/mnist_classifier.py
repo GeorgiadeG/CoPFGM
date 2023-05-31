@@ -41,11 +41,12 @@ class MNIST_Classifier:
         self.model = ConvNet().to(device)
         self.optimizer = optim.Adadelta(self.model.parameters(), lr=1.0)
         self.scheduler = StepLR(self.optimizer, step_size=1, gamma=0.7)
+        self.device = device
 
     def train(self, train_loader, epoch):
         self.model.train()
         for batch_idx, (data, target) in enumerate(train_loader):
-            data, target = data.to(device), target.to(device)
+            data, target = data.to(self.device), target.to(self.device)
             self.optimizer.zero_grad()
             output = self.model(data)
             loss = F.nll_loss(output, target)
@@ -62,7 +63,7 @@ class MNIST_Classifier:
         correct = 0
         with torch.no_grad():
             for data, target in test_loader:
-                data, target = data.to(device), target.to(device)
+                data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data)
                 test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
                 pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
@@ -74,12 +75,15 @@ class MNIST_Classifier:
             test_loss, correct, len(test_loader.dataset),
             100. * correct / len(test_loader.dataset)))
 
-    def predict(self, input_tensor, threshold=0.5):
+    def predict(self, input_tensor, threshold=0.7):
         self.model.eval()  # Set the model to evaluation mode
-        input_tensor = input_tensor.to(device)  # Ensure the tensor is on the right device
+        input_tensor = input_tensor.to(self.device)  # Ensure the tensor is on the right device
         output = self.model(input_tensor)  # Pass the tensor through the model
         output_probabilities = torch.nn.functional.softmax(output, dim=1)
         _, preds = torch.max(output_probabilities, 1)  # Get the predicted labels
         confident_indices = output_probabilities.max(dim=1).values > threshold
         preds[~confident_indices] = -1  # Replace predictions below the threshold with -1 (or any invalid class label)
         return preds
+
+    def get_prediction_function(self):
+        return self.predict

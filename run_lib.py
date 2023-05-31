@@ -44,6 +44,9 @@ from torch.utils import tensorboard
 from torchvision.utils import make_grid, save_image
 from torch import nn
 from torchvision import models
+import torchvision.transforms as transforms
+import torchvision.datasets as datasets_torch
+from torch.utils.data import DataLoader
 from utils import save_checkpoint, restore_checkpoint
 import datasets_utils.celeba
 from classifiers.mnist_classifier import MNIST_Classifier
@@ -75,7 +78,7 @@ def save_images_and_labels(image_batch, label_batch, output_dir='output_images')
 
 def get_classifier_pred_fn(dataset):
   if dataset=='mnist':
-    return train_mnist_classifier.predict
+    return train_mnist_classifier
 def train_mnist_classifier():
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -88,18 +91,18 @@ def train_mnist_classifier():
   ])
 
   # Load the datasets with ImageFolder
-  train_dataset = datasets.MNIST(root='~/torch_datasets', train=True, transform=transform, download=True)
-  test_dataset = datasets.MNIST(root='~/torch_datasets', train=False, transform=transform, download=True)
+  train_dataset = datasets_torch.MNIST(root='~/torch_datasets', train=True, transform=transform, download=True)
+  test_dataset = datasets_torch.MNIST(root='~/torch_datasets', train=False, transform=transform, download=True)
 
   # Define a loader for the training data we can iterate through in 64-image batches
   train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
   test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=64, shuffle=False)
 
-  for epoch in range(1, 5):
+  for epoch in range(1, 10):
     mnist_classifier.train(train_loader, epoch)
     mnist_classifier.test(test_loader)
 
-  return mnist_classifier
+  return mnist_classifier.get_prediction_function()
 
 def train(config, workdir):
   """Runs the training pipeline.
@@ -139,7 +142,7 @@ def train(config, workdir):
   train_iter = iter(train_ds)  # pytype: disable=wrong-arg-types
   eval_iter = iter(eval_ds)  # pytype: disable=wrong-arg-types
 
-  pred_fn = get_classifier_pred_fn('mnist')
+  pred_fn = train_mnist_classifier()
 
   # Create data normalizer and its inverse
   scaler = datasets.get_data_scaler(config)
@@ -178,7 +181,7 @@ def train(config, workdir):
     batch = scaler(batch)
 
     # Execute one training step
-    loss = train_step_fn(state, batch,label_batch, step)
+    loss = train_step_fn(state, batch,label_batch, step, pred_fn)
 
     if step % config.training.log_freq == 0:
       logging.info("step: %d, training_loss: %.5e" % (step, loss.item()))
@@ -193,7 +196,7 @@ def train(config, workdir):
       eval_batch = torch.from_numpy(next(eval_iter)['image']._numpy()).to(config.device).float()
       eval_batch = eval_batch.permute(0, 3, 1, 2)
       eval_batch = scaler(eval_batch)
-      eval_loss = eval_step_fn(state, eval_batch, label_batch, step)
+      eval_loss = eval_step_fn(state, eval_batch, label_batch, step, pred_fn)
       logging.info("step: %d, eval_loss: %.5e" % (step, eval_loss.item()))
       writer.add_scalar("eval_loss", eval_loss.item(), step)
 
