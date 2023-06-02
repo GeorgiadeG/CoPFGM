@@ -163,21 +163,26 @@ so
 
     pred_labels = pred_fn(predicted_images)
 
-    correct_cnt = predicted_images.shape[0] - torch.sum(pred_labels == labels_batch)
+    criterion = nn.CrossEntropyLoss()
+    loss = criterion(pred_labels, labels_batch)
 
-    new_pred_tensor = torch.ones(len(pred_labels)).to(pred_labels.device)
+    # correct_cnt = predicted_images.shape[0] - torch.sum(pred_labels == labels_batch)
+    #
+    # new_pred_tensor = torch.ones(len(pred_labels)).to(pred_labels.device)
 
-    for i in range(predicted_images.shape[0]):
-      if pred_labels[i] != labels_batch[i]:
-        temp = m[i] / sde.M
-      else:
-        temp = 1
-      temp *= (1+F.mse_loss(predicted_images[i], samples_batch[i]))
-      # new_val = new_val * new_val
-
-      new_pred_tensor[i] = temp
-
-    pred_tensor = new_pred_tensor
+    # for i in range(predicted_images.shape[0]):
+    #   if pred_labels[i] != labels_batch[i]:
+    #     temp = m[i] / sde.M # 22
+    #     # temp = sde.M / m[i]
+    #     temp *= (1+F.mse_loss(predicted_images[i], samples_batch[i]))
+    #   else:
+    #     # temp = 1 # 22
+    #     temp = -((m[i]/sde.M)**2) + 1
+    #   # new_val = new_val * new_val
+    #
+    #   new_pred_tensor[i] = temp
+    #
+    # pred_tensor = new_pred_tensor
 
     # visualize_predictions(predicted_images,  pred_labels, "eval/save" )
 

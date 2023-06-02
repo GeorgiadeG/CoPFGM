@@ -32,7 +32,7 @@ class ConvNet(nn.Module):
         x = F.relu(x)
         x = self.dropout2(x)
         x = self.fc2(x)
-        output = F.log_softmax(x, dim=1)
+        output = torch.sigmoid(x)
         return output
 
 
@@ -49,7 +49,6 @@ class MNIST_Classifier:
             data, target = data.to(self.device), target.to(self.device)
             self.optimizer.zero_grad()
             output = self.model(data)
-            loss = F.nll_loss(output, target)
             loss.backward()
             self.optimizer.step()
             if batch_idx % 100 == 0:
