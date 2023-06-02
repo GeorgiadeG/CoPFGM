@@ -19,6 +19,7 @@
 import torch
 import torch.optim as optim
 import torch.nn.functional
+import torch.nn as nn
 import numpy as np
 from models import utils as mutils
 from methods import VESDE, VPSDE
@@ -84,9 +85,9 @@ def optimization_manager(config):
 
   return optimize_fn
 
-def compute_loss(self, output_probabilities, target):
+def compute_loss(output_probabilities, target):
   loss_fn = nn.CrossEntropyLoss()
-  target = target.to(self.device)
+  target = target.to(target.device)
   loss = loss_fn(output_probabilities, target)
   return loss
 
@@ -166,9 +167,10 @@ so
 
     predicted_images = perturbed_samples_x + net_x
 
-    preds, output = self.predict(predicted_images, threshold=0.7)
+    preds, output = pred_fn(predicted_images, threshold=0.85)
 
-    cross_entropy = self.compute_loss(output, labels_batch)
+    cross_entropy = compute_loss(output_probabilities=output, target=labels_batch)
+    # cross_entropy += 1
     # correct_cnt = predicted_images.shape[0] - torch.sum(pred_labels == labels_batch)
     #
     # new_pred_tensor = torch.ones(len(pred_labels)).to(pred_labels.device)
@@ -206,10 +208,20 @@ so
     # if step_count > 20:
     #   step_count = 20
 
+
     # loss = torch.mean(loss + step_count * sde.config.training.similarity_rate * ssim_loss)
-    # if step < 2000:
-    loss = torch.mean(loss)
-    loss = cross_entropy * loss
+    if step < 1000:
+      loss = torch.mean(loss)
+    elif step < 2000:
+      loss = (1+cross_entropy) * torch.mean(loss)
+    elif step < 3000:
+      loss = (1+2*cross_entropy) * torch.mean(loss)
+    elif step < 4000:
+      loss = (1+3*cross_entropy) * torch.mean(loss)
+    elif step < 5000:
+      loss = (1+4*cross_entropy) * torch.mean(loss)
+    else:
+      loss = (1+5*cross_entropy) * torch.mean(loss)
     # else:
     # loss = torch.mean(torch.mul(loss, pred_tensor))
     # loss *= (1 + (1 - (correct_cnt / len(pred_labels))))**sde.config.training.xi

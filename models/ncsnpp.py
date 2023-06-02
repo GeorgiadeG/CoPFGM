@@ -185,8 +185,8 @@ class NCSNpp(nn.Module):
     else:
       raise ValueError(f'resblock type {resblock_type} unrecognized.')
 
-    # channels = config.data.num_channels + config.data.classes
-    channels = config.data.num_channels+1
+    channels = config.data.num_channels + config.data.classes
+    # channels = config.data.num_channels+1
     # channels = config.data.num_channels
     if progressive_input != 'none':
       input_pyramid_ch = channels
