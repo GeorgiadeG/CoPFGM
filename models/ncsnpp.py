@@ -287,20 +287,20 @@ class NCSNpp(nn.Module):
 
   def forward(self, x, cond, labels=None):
 
-    # # Ensure one_hot is in the same device as x
-    # one_hot = one_hot.to(x.device)
-    #
-    # # Expand the dimensions of one_hot to match that of x
-    # # Assuming x has shape (batch_size, channels, height, width)
-    # # and one_hot has shape (batch_size, num_classes)
-    # one_hot = one_hot.unsqueeze(-1).unsqueeze(-1)
-    #
-    # # Repeat one_hot across the spatial dimensions
-    # # so it has the same shape as x
-    # one_hot = one_hot.expand(-1, -1, x.shape[2], x.shape[3])
-    #
-    # # Concatenate the one-hot encodings to x along the channel dimension
-    # x = torch.cat([x, one_hot], dim=1)
+    # Ensure one_hot is in the same device as x
+    one_hot = labels.to(x.device)
+
+    # Expand the dimensions of one_hot to match that of x
+    # Assuming x has shape (batch_size, channels, height, width)
+    # and one_hot has shape (batch_size, num_classes)
+    one_hot = one_hot.unsqueeze(-1).unsqueeze(-1)
+
+    # Repeat one_hot across the spatial dimensions
+    # so it has the same shape as x
+    one_hot = one_hot.expand(-1, -1, x.shape[2], x.shape[3])
+
+    # Concatenate the one-hot encodings to x along the channel dimension
+    x = torch.cat([x, one_hot], dim=1)
 
     # batch_size, num_channels, img_height, img_width = x.size()
     #
@@ -357,13 +357,13 @@ class NCSNpp(nn.Module):
 
     # x = self.sparl_cc(x, labels)
 
-    extra_channel = torch.zeros(x.shape[0], 1, self.img_size, self.img_size).to(x.device)
-
-    for i in range(x.shape[0]):
-      for j in range(x.shape[2]):
-        extra_channel[i, 0, j, -self.num_classes:] = labels[i]
-
-    x = torch.cat([x, extra_channel], dim=1)
+    # extra_channel = torch.zeros(x.shape[0], 1, self.img_size, self.img_size).to(x.device)
+    #
+    # for i in range(x.shape[0]):
+    #   for j in range(x.shape[2]):
+    #     extra_channel[i, 0, j, -self.num_classes:] = labels[i]
+    #
+    # x = torch.cat([x, extra_channel], dim=1)
 
     # assert x.shape[0] == batch_size
     # assert x.shape[1] == self.num_channels

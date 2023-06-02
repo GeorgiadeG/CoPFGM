@@ -32,7 +32,7 @@ class ConvNet(nn.Module):
         x = F.relu(x)
         x = self.dropout2(x)
         x = self.fc2(x)
-        output = torch.sigmoid(x)
+        output = F.log_softmax(x, dim=1)
         return output
 
 
@@ -49,6 +49,7 @@ class MNIST_Classifier:
             data, target = data.to(self.device), target.to(self.device)
             self.optimizer.zero_grad()
             output = self.model(data)
+            loss = F.nll_loss(output, target)
             loss.backward()
             self.optimizer.step()
             if batch_idx % 100 == 0:
@@ -77,12 +78,12 @@ class MNIST_Classifier:
     def predict(self, input_tensor, threshold=0.7):
         self.model.eval()  # Set the model to evaluation mode
         input_tensor = input_tensor.to(self.device)  # Ensure the tensor is on the right device
-        output = self.model(input_tensor)  # Pass the tensor through the model
+        output = self.model(input_tensor)  # Pass the tensor through the model (raw output / logits)
         output_probabilities = torch.nn.functional.softmax(output, dim=1)
         _, preds = torch.max(output_probabilities, 1)  # Get the predicted labels
         confident_indices = output_probabilities.max(dim=1).values > threshold
         preds[~confident_indices] = -1  # Replace predictions below the threshold with -1 (or any invalid class label)
-        return preds
+        return preds, output  # return raw output (logits) instead of probabilities
 
     def get_prediction_function(self):
         return self.predict

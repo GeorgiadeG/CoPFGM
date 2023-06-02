@@ -47,7 +47,7 @@ def get_default_configs():
   config.data = data = ml_collections.ConfigDict()
   data.dataset = 'CIFAR10'
   data.image_size = 32
-  data.random_flip = True
+  data.random_flip = False
   data.centered = False
   data.uniform_dequantization = False
   data.num_channels = 3

@@ -84,6 +84,11 @@ def optimization_manager(config):
 
   return optimize_fn
 
+def compute_loss(self, output_probabilities, target):
+  loss_fn = nn.CrossEntropyLoss()
+  target = target.to(self.device)
+  loss = loss_fn(output_probabilities, target)
+  return loss
 
 def get_loss_fn(sde, train, reduce_mean=True, continuous=True, eps=1e-5, method_name=None):
   """Create a loss function for training with arbirary SDEs.
@@ -161,11 +166,9 @@ so
 
     predicted_images = perturbed_samples_x + net_x
 
-    pred_labels = pred_fn(predicted_images)
+    preds, output = self.predict(predicted_images, threshold=0.7)
 
-    criterion = nn.CrossEntropyLoss()
-    loss_pred = criterion(pred_labels, labels_batch)
-
+    cross_entropy = self.compute_loss(output, labels_batch)
     # correct_cnt = predicted_images.shape[0] - torch.sum(pred_labels == labels_batch)
     #
     # new_pred_tensor = torch.ones(len(pred_labels)).to(pred_labels.device)
@@ -206,7 +209,7 @@ so
     # loss = torch.mean(loss + step_count * sde.config.training.similarity_rate * ssim_loss)
     # if step < 2000:
     loss = torch.mean(loss)
-    loss = loss_red * loss
+    loss = cross_entropy * loss
     # else:
     # loss = torch.mean(torch.mul(loss, pred_tensor))
     # loss *= (1 + (1 - (correct_cnt / len(pred_labels))))**sde.config.training.xi
