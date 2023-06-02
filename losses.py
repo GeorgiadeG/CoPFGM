@@ -164,7 +164,7 @@ so
     pred_labels = pred_fn(predicted_images)
 
     criterion = nn.CrossEntropyLoss()
-    loss = criterion(pred_labels, labels_batch)
+    loss_pred = criterion(pred_labels, labels_batch)
 
     # correct_cnt = predicted_images.shape[0] - torch.sum(pred_labels == labels_batch)
     #
@@ -205,9 +205,10 @@ so
 
     # loss = torch.mean(loss + step_count * sde.config.training.similarity_rate * ssim_loss)
     # if step < 2000:
-    #     loss = torch.mean(loss)
+    loss = torch.mean(loss)
+    loss = loss_red * loss
     # else:
-    loss = torch.mean(torch.mul(loss, pred_tensor))
+    # loss = torch.mean(torch.mul(loss, pred_tensor))
     # loss *= (1 + (1 - (correct_cnt / len(pred_labels))))**sde.config.training.xi
 
     return loss
