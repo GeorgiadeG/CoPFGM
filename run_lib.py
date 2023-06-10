@@ -50,6 +50,7 @@ from torch.utils.data import DataLoader
 from utils import save_checkpoint, restore_checkpoint
 import datasets_utils.celeba
 from classifiers.mnist_classifier import MNIST_Classifier
+from classifiers.dilbert_classifier import Dilbert_Classifier
 
 FLAGS = flags.FLAGS
 gpus = tf.config.list_physical_devices('GPU')
@@ -77,8 +78,13 @@ def save_images_and_labels(image_batch, label_batch, output_dir='output_images')
         plt.imsave(filepath, image)
 
 def get_classifier_pred_fn(dataset):
-  if dataset=='mnist':
+  if dataset=='MNIST':
     return train_mnist_classifier
+  elif dataset=='dilbert':
+    return train_dilbert_classifier
+  else:
+    raise ValueError(f"Dataset {dataset} not recognized.")
+  
 def train_mnist_classifier():
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -103,6 +109,17 @@ def train_mnist_classifier():
     mnist_classifier.test(test_loader)
 
   return mnist_classifier.get_prediction_function()
+
+def train_dilbert_classifier(train_iter, eval_iter, steps_per_epoch):
+  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+  dilbert_classifier = Dilbert_Classifier(device)
+
+  for epoch in range(1, 10):
+    dilbert_classifier.train(train_iter, epoch, steps_per_epoch)
+    dilbert_classifier.test(eval_iter, steps_per_epoch)
+
+  return dilbert_classifier.get_prediction_function()
 
 def train(config, workdir):
   """Runs the training pipeline.
@@ -137,12 +154,16 @@ def train(config, workdir):
   state = restore_checkpoint(checkpoint_meta_dir, state, config.device)
   initial_step = int(state['step'])
 
-  train_ds, eval_ds, _ = datasets.get_dataset(config, uniform_dequantization=config.data.uniform_dequantization)
+  if config.data.dataset == 'dilbert':
+    train_ds, eval_ds = datasets_utils.celeba.get_dataset_dilbert(config, uniform_dequantization=config.data.uniform_dequantization)
+  else:
+    train_ds, eval_ds, _ = datasets.get_dataset(config, uniform_dequantization=config.data.uniform_dequantization)
 
   train_iter = iter(train_ds)  # pytype: disable=wrong-arg-types
   eval_iter = iter(eval_ds)  # pytype: disable=wrong-arg-types
 
-  pred_fn = train_mnist_classifier()
+  # pred_fn = get_classifier_pred_fn(config.data.dataset)
+  pred_fn = train_dilbert_classifier(train_iter, eval_iter, steps_per_epoch=1000)
 
   # Create data normalizer and its inverse
   scaler = datasets.get_data_scaler(config)

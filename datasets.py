@@ -19,6 +19,38 @@ import jax
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import numpy as np
+from torch.utils.data import DataLoader
+from torchvision import transforms
+import torch
+from torch.utils.data import Dataset, DataLoader
+import pandas as pd
+from PIL import Image
+import numpy as np
+import os
+
+class FaceImagesDataset(Dataset):
+    def __init__(self, csv_file, root_dir):
+        self.labels_frame = pd.read_csv(csv_file)
+        self.root_dir = root_dir
+        self.transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize((32, 32)),
+            transforms.ToTensor()
+        ])
+
+    def __len__(self):
+        return len(self.labels_frame)
+
+    def __getitem__(self, index):
+        img_path = os.path.join(self.root_dir, self.annotations.iloc[index, 0])
+        image = np.array(Image.open(img_path).convert("RGB"))
+        y_label = torch.tensor(int(self.annotations.iloc[index, 1]))
+
+        if self.transform:
+            image = self.transform(image)
+
+        return (image, y_label)
+
 
 def grayscale_to_rgb(image):
     return np.stack((image, image, image), axis=-1)
@@ -112,6 +144,12 @@ def get_dataset(config, uniform_dequantization=False, evaluation=False):
       img = tf.image.grayscale_to_rgb(img)
       img = tf.image.pad_to_bounding_box(img, 2, 2, 32, 32)
       return img
+  
+  elif config.data.dataset == 'dilbert':
+    current_dir = "/content/dirve/MyDrive/"
+    csv_file = os.path.join(current_dir, 'modified_labels_1.csv')
+    root_dir = os.path.join(current_dir, 'face_images_labeled/')
+    dataset_builder = FaceImagesDataset(csv_file, root_dir)
 
   elif config.data.dataset == 'SVHN':
     dataset_builder = tfds.builder('svhn_cropped')
@@ -178,13 +216,18 @@ def get_dataset(config, uniform_dequantization=False, evaluation=False):
   else:
     def preprocess_fn(d):
       """Basic preprocessing function scales data to [0, 1) and randomly flips."""
-      img = resize_op(d['image'])
+      if config.data.dataset == 'dilbert':
+        img, label = d
+      else:
+        img = resize_op(d['image'])
+        label = d.get('label', None)
+
       if config.data.random_flip and not evaluation:
         img = tf.image.random_flip_left_right(img)
       if uniform_dequantization:
         img = (tf.random.uniform(img.shape, dtype=tf.float32) + img * 255.) / 256.
 
-      return dict(image=img, label=d.get('label', None))
+      return dict(image=img, label=label)
 
   def create_dataset(dataset_builder, split):
     dataset_options = tf.data.Options()
@@ -206,7 +249,22 @@ def get_dataset(config, uniform_dequantization=False, evaluation=False):
     ds = ds.map(preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     ds = ds.batch(batch_size, drop_remainder=True)
     return ds.prefetch(prefetch_size)
+  
+  def create_dilbert_dataset(dataset_builder, split):
+    # Handling for custom PyTorch dataset
+    if split == 'train':
+        sampler = torch.utils.data.RandomSampler(dataset_builder)
+    else:
+        sampler = torch.utils.data.SequentialSampler(dataset_builder)
+    
+    batched_ds = torch.utils.data.DataLoader(dataset_builder, batch_size=batch_size, sampler=sampler, drop_last=True)
+    return batched_ds
+  
+  if config.data.dataset == 'dilbert':
+    train_ds = create_dilbert_dataset(dataset_builder, train_split_name)
+    eval_ds = create_dilbert_dataset(dataset_builder, eval_split_name)
+  else:
+    train_ds = create_dataset(dataset_builder, train_split_name)
+    eval_ds = create_dataset(dataset_builder, eval_split_name)
 
-  train_ds = create_dataset(dataset_builder, train_split_name)
-  eval_ds = create_dataset(dataset_builder, eval_split_name)
   return train_ds, eval_ds, dataset_builder

@@ -188,6 +188,10 @@ so
     #   new_pred_tensor[i] = temp
     #
     # pred_tensor = new_pred_tensor
+    # temp = 0
+
+    # for i in range(predicted_images.shape[0]):
+    #     temp += F.mse_loss(predicted_images[i], samples_batch[i]) / predicted_images.shape[0]
 
     # visualize_predictions(predicted_images,  pred_labels, "eval/save" )
 
@@ -210,18 +214,12 @@ so
 
 
     # loss = torch.mean(loss + step_count * sde.config.training.similarity_rate * ssim_loss)
+    # TODO ADD CONSTANTS AS CONFIG
     if step < 1000:
       loss = torch.mean(loss)
-    elif step < 2000:
-      loss = (1+cross_entropy) * torch.mean(loss)
-    elif step < 3000:
-      loss = (1+2*cross_entropy) * torch.mean(loss)
-    elif step < 4000:
-      loss = (1+3*cross_entropy) * torch.mean(loss)
-    elif step < 5000:
-      loss = (1+4*cross_entropy) * torch.mean(loss)
     else:
-      loss = (1+5*cross_entropy) * torch.mean(loss)
+      loss = (0.5+cross_entropy) * torch.mean(loss)
+
     # else:
     # loss = torch.mean(torch.mul(loss, pred_tensor))
     # loss *= (1 + (1 - (correct_cnt / len(pred_labels))))**sde.config.training.xi
