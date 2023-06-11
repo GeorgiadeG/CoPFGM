@@ -118,6 +118,10 @@ def train_dilbert_classifier(train_iter, eval_iter):
   dilbert_classifier.train(train_iter, 1)
   dilbert_classifier.test(eval_iter)
 
+  # #reset iterators
+  # train_iter = iter(train_iter)  # pytype: disable=wrong-arg-types
+  # eval_iter = iter(eval_iter)  # pytype: disable=wrong-arg-types
+
   return dilbert_classifier.get_prediction_function()
 
 def train(config, workdir):
@@ -158,9 +162,14 @@ def train(config, workdir):
   train_iter = iter(train_ds)  # pytype: disable=wrong-arg-types
   eval_iter = iter(eval_ds)  # pytype: disable=wrong-arg-types
 
+  classifier_train_ds, classifier_eval_ds, _  = datasets.get_dataset(config, uniform_dequantization=config.data.uniform_dequantization, dilbert_classification=True)
+  
+  classifier_train_iter = iter(classifier_train_ds)
+  classifier_eval_iter = iter(classifier_eval_ds)
+
   print("before predfn")
   # pred_fn = get_classifier_pred_fn(config.data.dataset)
-  pred_fn = train_dilbert_classifier(train_iter, eval_iter)
+  pred_fn = train_dilbert_classifier(classifier_train_iter, classifier_eval_iter)
   print("after fn")
 
   # Create data normalizer and its inverse
@@ -195,10 +204,17 @@ def train(config, workdir):
     eval_iter = iter(eval_ds)  # pytype: disable=wrong-arg-types  
 
     train_batch = next(train_iter)
-    batch = torch.from_numpy(train_batch['image']._numpy()).to(config.device).float()
-    batch = batch.permute(0, 3, 1, 2)
-    label_batch = torch.from_numpy(train_batch['label']._numpy()).to(config.device).long()
-    save_images_and_labels(batch,label_batch)
+    if config.data.dataset == 'dilbert':
+      batch = train_batch['image'].to(config.device).float()
+      label_batch = train_batch['label'].to(config.device).long()
+      # print("batch shape:", batch.shape)
+    else:
+      batch = torch.from_numpy(train_batch['image']._numpy()).to(config.device).float()
+      label_batch = torch.from_numpy(train_batch['label']._numpy()).to(config.device).long()
+      batch = batch.permute(0, 3, 1, 2)
+
+
+    # save_images_and_labels(batch,label_batch)
     batch = scaler(batch)
 
     # Execute one training step
@@ -214,8 +230,12 @@ def train(config, workdir):
 
     # Report the loss on an evaluation dataset periodically
     if step % config.training.eval_freq == 0:
-      eval_batch = torch.from_numpy(next(eval_iter)['image']._numpy()).to(config.device).float()
-      eval_batch = eval_batch.permute(0, 3, 1, 2)
+      if config.data.dataset == 'dilbert':
+        evaluation_batch = next(eval_iter)
+        eval_batch = evaluation_batch['image'].to(config.device).float()
+      else:
+        eval_batch = torch.from_numpy(next(eval_iter)['image']._numpy()).to(config.device).float()
+        eval_batch = eval_batch.permute(0, 3, 1, 2)
       eval_batch = scaler(eval_batch)
       eval_loss = eval_step_fn(state, eval_batch, label_batch, step, pred_fn)
       logging.info("step: %d, eval_loss: %.5e" % (step, eval_loss.item()))
@@ -372,8 +392,13 @@ def evaluate(config,
       all_losses = []
       eval_iter = iter(eval_ds)  # pytype: disable=wrong-arg-types
       for i, batch in enumerate(eval_iter):
-        eval_batch = torch.from_numpy(batch['image']._numpy()).to(config.device).float()
-        eval_batch = eval_batch.permute(0, 3, 1, 2)
+        if config.data.dataset == 'dilbert':
+          evaluation_batch = next(eval_iter)
+          eval_batch = evaluation_batch['image'].to(config.device).float()
+        else:
+          eval_batch = torch.from_numpy(next(eval_iter)['image']._numpy()).to(config.device).float()
+          eval_batch = eval_batch.permute(0, 3, 1, 2)
+
         eval_batch = scaler(eval_batch)
         eval_loss = eval_step(state, eval_batch)
         all_losses.append(eval_loss.item())
@@ -394,8 +419,12 @@ def evaluate(config,
         bpd_iter = iter(ds_bpd)  # pytype: disable=wrong-arg-types
         for batch_id in range(len(ds_bpd)):
           batch = next(bpd_iter)
-          eval_batch = torch.from_numpy(batch['image']._numpy()).to(config.device).float()
-          eval_batch = eval_batch.permute(0, 3, 1, 2)
+          if config.data.dataset == 'dilbert':
+            evaluation_batch = next(eval_iter)
+            eval_batch = evaluation_batch['image'].to(config.device).float()
+          else:
+            eval_batch = torch.from_numpy(next(eval_iter)['image']._numpy()).to(config.device).float()
+            eval_batch = eval_batch.permute(0, 3, 1, 2)
           eval_batch = scaler(eval_batch)
           bpd = likelihood_fn(net, eval_batch)[0]
           bpd = bpd.detach().cpu().numpy().reshape(-1)

@@ -215,7 +215,7 @@ so
 
     # loss = torch.mean(loss + step_count * sde.config.training.similarity_rate * ssim_loss)
     # TODO ADD CONSTANTS AS CONFIG
-    if step < 1000:
+    if step < 2500:
       loss = torch.mean(loss)
     else:
       loss = (0.5+cross_entropy) * torch.mean(loss)

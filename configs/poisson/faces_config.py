@@ -24,7 +24,7 @@ def get_config():
   training = config.training
   training.sde = 'poisson'
   training.continuous = True
-  training.batch_size = 1000
+  training.batch_size = 512
   training.small_batch_size = 128
   training.gamma = 5
   training.restrict_M = True

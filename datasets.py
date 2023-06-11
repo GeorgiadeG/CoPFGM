@@ -105,7 +105,7 @@ def central_crop(image, size):
   return tf.image.crop_to_bounding_box(image, top, left, size, size)
 
 
-def get_dataset(config, uniform_dequantization=False, evaluation=False):
+def get_dataset(config, uniform_dequantization=False, evaluation=False, dilbert_classification=False):
   """Create data loaders for training and evaluation.
 
   Args:
@@ -118,6 +118,8 @@ def get_dataset(config, uniform_dequantization=False, evaluation=False):
   """
   # Compute batch size for this worker.
   batch_size = config.training.batch_size if not evaluation else config.eval.batch_size
+  if dilbert_classification:
+    batch_size = 10
   if batch_size % jax.device_count() != 0:
     raise ValueError(f'Batch sizes ({batch_size} must be divided by'
                      f'the number of devices ({jax.device_count()})')
