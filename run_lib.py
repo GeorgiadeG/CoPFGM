@@ -110,14 +110,13 @@ def train_mnist_classifier():
 
   return mnist_classifier.get_prediction_function()
 
-def train_dilbert_classifier(train_iter, eval_iter, steps_per_epoch):
+def train_dilbert_classifier(train_iter, eval_iter):
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
   dilbert_classifier = Dilbert_Classifier(device)
 
-  for epoch in range(1, 10):
-    dilbert_classifier.train(train_iter, epoch, steps_per_epoch)
-    dilbert_classifier.test(eval_iter, steps_per_epoch)
+  dilbert_classifier.train(train_iter, 1)
+  dilbert_classifier.test(eval_iter)
 
   return dilbert_classifier.get_prediction_function()
 
@@ -154,16 +153,15 @@ def train(config, workdir):
   state = restore_checkpoint(checkpoint_meta_dir, state, config.device)
   initial_step = int(state['step'])
 
-  if config.data.dataset == 'dilbert':
-    train_ds, eval_ds = datasets_utils.celeba.get_dataset_dilbert(config, uniform_dequantization=config.data.uniform_dequantization)
-  else:
-    train_ds, eval_ds, _ = datasets.get_dataset(config, uniform_dequantization=config.data.uniform_dequantization)
+  train_ds, eval_ds, _ = datasets.get_dataset(config, uniform_dequantization=config.data.uniform_dequantization)
 
   train_iter = iter(train_ds)  # pytype: disable=wrong-arg-types
   eval_iter = iter(eval_ds)  # pytype: disable=wrong-arg-types
 
+  print("before predfn")
   # pred_fn = get_classifier_pred_fn(config.data.dataset)
-  pred_fn = train_dilbert_classifier(train_iter, eval_iter, steps_per_epoch=1000)
+  pred_fn = train_dilbert_classifier(train_iter, eval_iter)
+  print("after fn")
 
   # Create data normalizer and its inverse
   scaler = datasets.get_data_scaler(config)
@@ -193,6 +191,8 @@ def train(config, workdir):
   logging.info("Starting training loop at step %d." % (initial_step,))
   for step in range(initial_step, num_train_steps + 1):
     # Convert data to JAX arrays and normalize them. Use ._numpy() to avoid copy.
+    train_iter = iter(train_ds)  # pytype: disable=wrong-arg-types
+    eval_iter = iter(eval_ds)  # pytype: disable=wrong-arg-types  
 
     train_batch = next(train_iter)
     batch = torch.from_numpy(train_batch['image']._numpy()).to(config.device).float()

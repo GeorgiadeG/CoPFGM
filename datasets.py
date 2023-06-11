@@ -42,14 +42,16 @@ class FaceImagesDataset(Dataset):
         return len(self.labels_frame)
 
     def __getitem__(self, index):
-        img_path = os.path.join(self.root_dir, self.annotations.iloc[index, 0])
+        img_path = os.path.join(self.root_dir, self.labels_frame.iloc[index, 0])
         image = np.array(Image.open(img_path).convert("RGB"))
-        y_label = torch.tensor(int(self.annotations.iloc[index, 1]))
+        y_label = torch.tensor(int(self.labels_frame.iloc[index, 1]))
 
         if self.transform:
             image = self.transform(image)
+        
+        # print(image.shape)
 
-        return (image, y_label)
+        return {'image': image, 'label': y_label}
 
 
 def grayscale_to_rgb(image):
@@ -146,7 +148,7 @@ def get_dataset(config, uniform_dequantization=False, evaluation=False):
       return img
   
   elif config.data.dataset == 'dilbert':
-    current_dir = "/content/dirve/MyDrive/"
+    current_dir = "/content/drive/MyDrive/"
     csv_file = os.path.join(current_dir, 'modified_labels_1.csv')
     root_dir = os.path.join(current_dir, 'face_images_labeled/')
     dataset_builder = FaceImagesDataset(csv_file, root_dir)
@@ -261,8 +263,8 @@ def get_dataset(config, uniform_dequantization=False, evaluation=False):
     return batched_ds
   
   if config.data.dataset == 'dilbert':
-    train_ds = create_dilbert_dataset(dataset_builder, train_split_name)
-    eval_ds = create_dilbert_dataset(dataset_builder, eval_split_name)
+    train_ds = create_dilbert_dataset(dataset_builder, 'train')
+    eval_ds = create_dilbert_dataset(dataset_builder, 'test')
   else:
     train_ds = create_dataset(dataset_builder, train_split_name)
     eval_ds = create_dataset(dataset_builder, eval_split_name)

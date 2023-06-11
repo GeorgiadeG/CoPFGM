@@ -43,45 +43,51 @@ class Dilbert_Classifier:
         self.scheduler = StepLR(self.optimizer, step_size=1, gamma=0.7)
         self.device = device
 
-    def train(self, train_iter, epoch, steps_per_epoch):
+    def train(self, train_iter, epoch):
         self.model.train()
-        for step in range(steps_per_epoch):
-            batch = next(train_iter)
+        for step, batch in enumerate(train_iter):
             data, target = batch['image'], batch['label']
+            # print(data.shape)
+
             # Convert TensorFlow tensors to PyTorch tensors
-            data = torch.from_numpy(data.numpy()).permute(0, 3, 1, 2).float().to(self.device)
+            data = torch.from_numpy(data.numpy()).float().to(self.device)
             target = torch.from_numpy(target.numpy()).long().to(self.device)
             self.optimizer.zero_grad()
             output = self.model(data)
             loss = F.nll_loss(output, target)
             loss.backward()
             self.optimizer.step()
-            if step % 100 == 0:
+            if step % 10 == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, step * len(data), steps_per_epoch,
-                    100. * step / steps_per_epoch, loss.item()))
+                    epoch, step * len(data), len(train_iter._dataset),
+                    100. * step / len(train_iter), loss.item()))
 
-    def test(self, eval_iter, steps_per_epoch):
+
+
+    def test(self, eval_iter):
         self.model.eval()
         test_loss = 0
         correct = 0
         with torch.no_grad():
-            for step in range(steps_per_epoch):
-                batch = next(eval_iter)
+            for step, batch in enumerate(eval_iter):
                 data, target = batch['image'], batch['label']
+                # print(data.shape)
+
                 # Convert TensorFlow tensors to PyTorch tensors
-                data = torch.from_numpy(data.numpy()).permute(0, 3, 1, 2).float().to(self.device)
+                data = torch.from_numpy(data.numpy()).float().to(self.device)
                 target = torch.from_numpy(target.numpy()).long().to(self.device)
                 output = self.model(data)
                 test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
                 pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
                 correct += pred.eq(target.view_as(pred)).sum().item()
 
-        test_loss /= steps_per_epoch * data.size(0)
+        test_loss /= len(eval_iter._dataset)
 
         print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            test_loss, correct, steps_per_epoch * data.size(0),
-            100. * correct / (steps_per_epoch * data.size(0))))
+            test_loss, correct, len(eval_iter._dataset),
+            100. * correct / len(eval_iter._dataset)))
+
+
 
 
     def predict(self, input_tensor, threshold=0.7):
