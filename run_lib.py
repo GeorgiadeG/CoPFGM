@@ -162,15 +162,18 @@ def train(config, workdir):
   train_iter = iter(train_ds)  # pytype: disable=wrong-arg-types
   eval_iter = iter(eval_ds)  # pytype: disable=wrong-arg-types
 
-  classifier_train_ds, classifier_eval_ds, _  = datasets.get_dataset(config, uniform_dequantization=config.data.uniform_dequantization, dilbert_classification=True)
-  
-  classifier_train_iter = iter(classifier_train_ds)
-  classifier_eval_iter = iter(classifier_eval_ds)
+  if config.data.dataset == 'dilbert':
+    classifier_train_ds, classifier_eval_ds, _  = datasets.get_dataset(config, uniform_dequantization=config.data.uniform_dequantization, dilbert_classification=True)
+    
+    classifier_train_iter = iter(classifier_train_ds)
+    classifier_eval_iter = iter(classifier_eval_ds)
 
-  print("before predfn")
-  # pred_fn = get_classifier_pred_fn(config.data.dataset)
-  pred_fn = train_dilbert_classifier(classifier_train_iter, classifier_eval_iter)
-  print("after fn")
+    # pred_fn = get_classifier_pred_fn(config.data.dataset)
+    pred_fn = train_dilbert_classifier(classifier_train_iter, classifier_eval_iter)
+  elif config.data.dataset == 'MNIST':
+    pred_fn = train_mnist_classifier()
+  else:
+    raise Exception("Unsupported dataset for CoPFGM: " + str(config.data.dataset))
 
   # Create data normalizer and its inverse
   scaler = datasets.get_data_scaler(config)
@@ -561,9 +564,15 @@ def evaluate(config,
         all_logits = np.concatenate(all_logits, axis=0)[:config.eval.num_samples]
       all_pools = np.concatenate(all_pools, axis=0)[:config.eval.num_samples]
 
-      # Load pre-computed dataset statistics.
-      data_stats = evaluation.load_dataset_stats(config)
-      data_pools = data_stats["pool_3"]
+      if config.data.dataset == 'dilbert':
+        with np.load('/content/drive/MyDrive/real_dilbert_statistics.npz') as data:
+          data_pools = data['pool_3']
+        # Reshape to 2D if necessary
+        data_pools = data_pools.reshape(data_pools.shape[0], -1)
+      else:
+        # Load pre-computed dataset statistics.
+        data_stats = evaluation.load_dataset_stats(config)
+        data_pools = data_stats["pool_3"]
       # Compute FID/IS on all samples together.
       if not inceptionv3:
         inception_score = tfgan.eval.classifier_score_from_logits(all_logits)

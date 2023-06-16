@@ -119,7 +119,7 @@ def get_dataset(config, uniform_dequantization=False, evaluation=False, dilbert_
   # Compute batch size for this worker.
   batch_size = config.training.batch_size if not evaluation else config.eval.batch_size
   if dilbert_classification:
-    batch_size = 10
+    batch_size = 1
   if batch_size % jax.device_count() != 0:
     raise ValueError(f'Batch sizes ({batch_size} must be divided by'
                      f'the number of devices ({jax.device_count()})')
