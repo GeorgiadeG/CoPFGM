@@ -32,9 +32,8 @@ def get_config():
   training.snapshot_freq = 500
   training.model = 'ddpmpp'
   training.M = 226
-  training.similarity_step_freq = 1000
-  training.similarity_rate = 1.2
-  training.xi = 2.5
+  training.beta = 0.5
+  training.grace_period = 2500
 
   # data
   data = config.data

@@ -155,7 +155,6 @@ so
 
     target = gt_direction
 
-    #TODO : PASS THE LABELS TO THE PREDICT FUNCTION
     net_fn = mutils.get_predict_fn(sde, model, train=train, continuous=continuous)
 
     perturbed_samples_x = perturbed_samples_vec[:, :-1].view_as(samples_batch)
@@ -170,38 +169,6 @@ so
     preds, output = pred_fn(predicted_images, threshold=0.85)
 
     cross_entropy = compute_loss(output_probabilities=output, target=labels_batch)
-    # cross_entropy += 1
-    # correct_cnt = predicted_images.shape[0] - torch.sum(pred_labels == labels_batch)
-    #
-    # new_pred_tensor = torch.ones(len(pred_labels)).to(pred_labels.device)
-
-    # for i in range(predicted_images.shape[0]):
-    #   if pred_labels[i] != labels_batch[i]:
-    #     temp = m[i] / sde.M # 22
-    #     # temp = sde.M / m[i]
-    #     temp *= (1+F.mse_loss(predicted_images[i], samples_batch[i]))
-    #   else:
-    #     # temp = 1 # 22
-    #     temp = -((m[i]/sde.M)**2) + 1
-    #   # new_val = new_val * new_val
-    #
-    #   new_pred_tensor[i] = temp
-    #
-    # pred_tensor = new_pred_tensor
-    # temp = 0
-
-    # for i in range(predicted_images.shape[0]):
-    #     temp += F.mse_loss(predicted_images[i], samples_batch[i]) / predicted_images.shape[0]
-
-    # visualize_predictions(predicted_images,  pred_labels, "eval/save" )
-
-    # print("Accuracy count: ", correct_cnt)
-    # print("pred_labels: ", pred_labels)
-    # print("labels_batch: ", labels_batch)
-
-    # actual_images = samples_batch
-
-    # ssim_loss = 1 - ssim(predicted_images, actual_images, data_range=1.0)
 
     net_x = net_x.view(net_x.shape[0], -1)
     # Predicted N+1-dimensional Poisson field
@@ -209,20 +176,10 @@ so
     loss = ((net - target) ** 2)
     loss = reduce_op(loss.reshape(loss.shape[0], -1), dim=-1)
 
-    # if step_count > 20:
-    #   step_count = 20
-
-
-    # loss = torch.mean(loss + step_count * sde.config.training.similarity_rate * ssim_loss)
-    # TODO ADD CONSTANTS AS CONFIG
-    if step < 2500:
+    if step < sde.config.training.grace_period:
       loss = torch.mean(loss)
     else:
-      loss = (0.5+cross_entropy) * torch.mean(loss)
-
-    # else:
-    # loss = torch.mean(torch.mul(loss, pred_tensor))
-    # loss *= (1 + (1 - (correct_cnt / len(pred_labels))))**sde.config.training.xi
+      loss = (sde.config.training.beta + cross_entropy) * torch.mean(loss)
 
     return loss
 

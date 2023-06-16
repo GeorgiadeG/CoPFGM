@@ -203,8 +203,10 @@ def train(config, workdir):
   logging.info("Starting training loop at step %d." % (initial_step,))
   for step in range(initial_step, num_train_steps + 1):
     # Convert data to JAX arrays and normalize them. Use ._numpy() to avoid copy.
-    train_iter = iter(train_ds)  # pytype: disable=wrong-arg-types
-    eval_iter = iter(eval_ds)  # pytype: disable=wrong-arg-types  
+
+    if config.data.dataset == 'dilbert':
+      train_iter = iter(train_ds)  # pytype: disable=wrong-arg-types
+      eval_iter = iter(eval_ds)  # pytype:  disable=wrong-arg-types
 
     train_batch = next(train_iter)
     if config.data.dataset == 'dilbert':
