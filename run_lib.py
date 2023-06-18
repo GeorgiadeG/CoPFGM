@@ -571,6 +571,11 @@ def evaluate(config,
           data_pools = data['pool_3']
         # Reshape to 2D if necessary
         data_pools = data_pools.reshape(data_pools.shape[0], -1)
+      elif config.data.dataset == 'MNIST':
+        with np.load('/content/drive/MyDrive/real_mnist_statistics.npz') as data:
+          data_pools = data['pool_3']
+        # Reshape to 2D if necessary
+        data_pools = data_pools.reshape(data_pools.shape[0], -1)
       else:
         # Load pre-computed dataset statistics.
         data_stats = evaluation.load_dataset_stats(config)
