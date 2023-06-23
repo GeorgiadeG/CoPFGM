@@ -164,6 +164,15 @@ so
     # step_count = step // sde.config.training.similarity_step_freq
     torch.autograd.set_detect_anomaly(True)
 
+    if sde.config.training.data.dataset == 'dilbert_large':
+      net_x = net_x.view(net_x.shape[0], -1)
+      # Predicted N+1-dimensional Poisson field
+      net = torch.cat([net_x, net_z[:, None]], dim=1)
+      loss = ((net - target) ** 2)
+      loss = reduce_op(loss.reshape(loss.shape[0], -1), dim=-1)
+      return torch.mean(loss)
+      
+
     predicted_images = perturbed_samples_x + net_x
 
     preds, output = pred_fn(predicted_images, threshold=0.85)

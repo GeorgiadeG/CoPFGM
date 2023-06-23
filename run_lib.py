@@ -82,6 +82,8 @@ def get_classifier_pred_fn(dataset):
     return train_mnist_classifier
   elif dataset=='dilbert':
     return train_dilbert_classifier
+  elif dataset=='dilbert_large':
+    return None
   else:
     raise ValueError(f"Dataset {dataset} not recognized.")
   
@@ -172,6 +174,8 @@ def train(config, workdir):
     pred_fn = train_dilbert_classifier(classifier_train_iter, classifier_eval_iter)
   elif config.data.dataset == 'MNIST':
     pred_fn = train_mnist_classifier()
+  elif config.data.dataset == 'dilbert_large':
+    pred_fn = None
   else:
     raise Exception("Unsupported dataset for CoPFGM: " + str(config.data.dataset))
 
@@ -204,12 +208,12 @@ def train(config, workdir):
   for step in range(initial_step, num_train_steps + 1):
     # Convert data to JAX arrays and normalize them. Use ._numpy() to avoid copy.
 
-    if config.data.dataset == 'dilbert':
+    if config.data.dataset == 'dilbert' or config.data.dataset == 'dilbert_large':
       train_iter = iter(train_ds)  # pytype: disable=wrong-arg-types
       eval_iter = iter(eval_ds)  # pytype:  disable=wrong-arg-types
 
     train_batch = next(train_iter)
-    if config.data.dataset == 'dilbert':
+    if config.data.dataset == 'dilbert' or config.data.dataset == 'dilbert_large':
       batch = train_batch['image'].to(config.device).float()
       label_batch = train_batch['label'].to(config.device).long()
       # print("batch shape:", batch.shape)
@@ -235,7 +239,7 @@ def train(config, workdir):
 
     # Report the loss on an evaluation dataset periodically
     if step % config.training.eval_freq == 0:
-      if config.data.dataset == 'dilbert':
+      if config.data.dataset == 'dilbert' or config.data.dataset == 'dilbert_large':
         evaluation_batch = next(eval_iter)
         eval_batch = evaluation_batch['image'].to(config.device).float()
       else:
@@ -397,7 +401,7 @@ def evaluate(config,
       all_losses = []
       eval_iter = iter(eval_ds)  # pytype: disable=wrong-arg-types
       for i, batch in enumerate(eval_iter):
-        if config.data.dataset == 'dilbert':
+        if config.data.dataset == 'dilbert' or config.data.dataset == 'dilbert_large':
           evaluation_batch = next(eval_iter)
           eval_batch = evaluation_batch['image'].to(config.device).float()
         else:
@@ -424,7 +428,7 @@ def evaluate(config,
         bpd_iter = iter(ds_bpd)  # pytype: disable=wrong-arg-types
         for batch_id in range(len(ds_bpd)):
           batch = next(bpd_iter)
-          if config.data.dataset == 'dilbert':
+          if config.data.dataset == 'dilbert' or config.data.dataset == 'dilbert_large':
             evaluation_batch = next(eval_iter)
             eval_batch = evaluation_batch['image'].to(config.device).float()
           else:

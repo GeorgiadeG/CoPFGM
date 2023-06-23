@@ -53,6 +53,30 @@ class FaceImagesDataset(Dataset):
 
         return {'image': image, 'label': y_label}
 
+class DilbertLargeDataset(Dataset):
+    def __init__(self, root_dir):
+        # self.labels_frame = pd.read_csv(csv_file)
+        self.root_dir = root_dir
+        self.transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize((512, 512)),
+            transforms.ToTensor()
+        ])
+
+    def __len__(self):
+        return 179
+
+    def __getitem__(self, index):
+        # All the images are saved same with index as index.png
+        img_path = os.path.join(self.root_dir, str(index) + '.png')
+
+        if self.transform:
+            image = self.transform(image)
+        
+        # print(image.shape)
+
+        return {'image': image, 'label': 0}
+
 
 def grayscale_to_rgb(image):
     return np.stack((image, image, image), axis=-1)
@@ -154,6 +178,11 @@ def get_dataset(config, uniform_dequantization=False, evaluation=False, dilbert_
     csv_file = os.path.join(current_dir, 'modified_labels_1.csv')
     root_dir = os.path.join(current_dir, 'face_images_labeled/')
     dataset_builder = FaceImagesDataset(csv_file, root_dir)
+
+  elif config.data.dataset == 'dilbert_large':
+    current_dir = "/content/drive/MyDrive/"
+    root_dir = os.path.join(current_dir, 'W7-captioned/')
+    dataset_builder = DilbertLargeDataset(root_dir)
 
   elif config.data.dataset == 'SVHN':
     dataset_builder = tfds.builder('svhn_cropped')
@@ -264,7 +293,7 @@ def get_dataset(config, uniform_dequantization=False, evaluation=False, dilbert_
     batched_ds = torch.utils.data.DataLoader(dataset_builder, batch_size=batch_size, sampler=sampler, drop_last=True)
     return batched_ds
   
-  if config.data.dataset == 'dilbert':
+  if config.data.dataset == 'dilbert' or config.data.dataset == 'dilbert_large':
     train_ds = create_dilbert_dataset(dataset_builder, 'train')
     eval_ds = create_dilbert_dataset(dataset_builder, 'test')
   else:
