@@ -14,65 +14,45 @@
 # limitations under the License.
 
 # Lint as: python3
-from configs.default_mnist_configs import get_default_configs
+from configs.default_large_dilbert import get_default_configs
 
 
 def get_config():
   config = get_default_configs()
+
   # training
   training = config.training
   training.sde = 'poisson'
   training.continuous = True
-  training.batch_size = 64
+  training.batch_size = 32
   training.small_batch_size = 32
   training.gamma = 5
   training.restrict_M = True
   training.tau = 0.03
   training.snapshot_freq = 500
   training.model = 'ddpmpp'
-  training.M = 356
-  training.beta = 0.5
-  training.grace_period = 2500
-
+  training.reduce_mean = True
 
   # data
   data = config.data
   data.channels = 3
-  data.centered = False
-  data.dataset = 'dilbert_large'
-  data.image_size = 512
-  data.classes = 6
-  data.random_flip = True
-
+  data.category = 'bedroom'
+  data.centered = True
 
   # sampling
   sampling = config.sampling
   sampling.method = 'ode'
   sampling.ode_solver = 'rk45'
-
+  #sampling.ode_solver = 'forward_euler'
+  #sampling.ode_solver = 'improved_euler'
   sampling.N = 100
   sampling.z_max = 100
   sampling.z_min = 1e-3
   sampling.upper_norm = 30000
-  # verbose
   sampling.vs = False
-  sampling.target = 0
-  sampling.snr = 0.075
-  sampling.N = 1000
-  sampling.z_exp = 0.1
 
-  # model
   # model
   model = config.model
-
-  model.sigma_max = 378
-  model.sigma_min = 0.01
-  model.num_scales = 2000
-  model.beta_min = 0.1
-  model.beta_max = 20.
-  model.dropout = 0.
-  model.embedding_type = 'fourier'
-
   model.name = 'ncsnpp'
   model.scale_by_sigma = False
   model.ema_rate = 0.9999
@@ -97,4 +77,9 @@ def get_config():
   model.embedding_type = 'positional'
   model.conv_size = 3
   model.sigma_end = 0.01
+
+  # optim
+  optim = config.optim
+  optim.lr = 2e-5
+
   return config
