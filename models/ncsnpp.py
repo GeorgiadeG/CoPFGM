@@ -136,8 +136,12 @@ class NCSNpp(nn.Module):
 
     else:
       raise ValueError(f'resblock type {resblock_type} unrecognized.')
-
-    channels = config.data.num_channels + config.data.classes
+    
+    if config.data.classes == 1:
+      self.channels = channels = config.data.num_channels
+      
+    else:
+      self.channels = channels = config.data.num_channels + config.data.classes
     # channels = config.data.num_channels+1
     # channels = config.data.num_channels
     if progressive_input != 'none':
@@ -239,20 +243,21 @@ class NCSNpp(nn.Module):
 
   def forward(self, x, cond, labels=None):
 
-    # Ensure one_hot is in the same device as x
-    one_hot = labels.to(x.device)
+    if self.channels > 3:
+      # Ensure one_hot is in the same device as x
+      one_hot = labels.to(x.device)
 
-    # Expand the dimensions of one_hot to match that of x
-    # x has shape (batch_size, channels, height, width)
-    # and one_hot has shape (batch_size, num_classes)
-    one_hot = one_hot.unsqueeze(-1).unsqueeze(-1)
+      # Expand the dimensions of one_hot to match that of x
+      # x has shape (batch_size, channels, height, width)
+      # and one_hot has shape (batch_size, num_classes)
+      one_hot = one_hot.unsqueeze(-1).unsqueeze(-1)
 
-    # Repeat one_hot across the spatial dimensions
-    # so it has the same shape as x
-    one_hot = one_hot.expand(-1, -1, x.shape[2], x.shape[3])
+      # Repeat one_hot across the spatial dimensions
+      # so it has the same shape as x
+      one_hot = one_hot.expand(-1, -1, x.shape[2], x.shape[3])
 
-    # Concatenate the one-hot encodings to x along the channel dimension
-    x = torch.cat([x, one_hot], dim=1)
+      # Concatenate the one-hot encodings to x along the channel dimension
+      x = torch.cat([x, one_hot], dim=1)
 
     # z (PFGM)/noise_level embedding; only for continuous training
     modules = self.all_modules

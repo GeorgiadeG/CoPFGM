@@ -69,6 +69,7 @@ class DilbertLargeDataset(Dataset):
     def __getitem__(self, index):
         # All the images are saved same with index as index.png
         img_path = os.path.join(self.root_dir, str(index) + '.png')
+        image = np.array(Image.open(img_path).convert("RGB"))
 
         if self.transform:
             image = self.transform(image)

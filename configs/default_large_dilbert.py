@@ -44,8 +44,8 @@ def get_default_configs():
 
   # data
   config.data = data = ml_collections.ConfigDict()
-  data.dataset = 'large_dilbert'
-  data.image_size = 512
+  data.dataset = 'dilbert_large'
+  data.image_size = 256
   data.random_flip = True
   data.uniform_dequantization = False
   data.centered = False

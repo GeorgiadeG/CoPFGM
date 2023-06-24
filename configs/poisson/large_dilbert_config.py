@@ -24,8 +24,8 @@ def get_config():
   training = config.training
   training.sde = 'poisson'
   training.continuous = True
-  training.batch_size = 32
-  training.small_batch_size = 32
+  training.batch_size = 16
+  training.small_batch_size = 4
   training.gamma = 5
   training.restrict_M = True
   training.tau = 0.03
@@ -38,6 +38,7 @@ def get_config():
   data.channels = 3
   data.category = 'bedroom'
   data.centered = True
+  data.classes = 1
 
   # sampling
   sampling = config.sampling
@@ -50,6 +51,7 @@ def get_config():
   sampling.z_min = 1e-3
   sampling.upper_norm = 30000
   sampling.vs = False
+  sampling.target = 0
 
   # model
   model = config.model
