@@ -136,7 +136,7 @@ Please find the statistics for FID scores in the following links and save them u
 
 ## Dilbert Dataset (ONLY FOR THESIS COMMITTEE)
 
-You can downaload the Dilbert images and labels from the following link:
+They are also provided in the repository, but here are the external links for the Dilbert dataset.
 
 [Images](https://drive.google.com/drive/folders/1cye_l2ultb34WQuvwiYHeSn_1RHZnjJ0?usp=sharing) ,
 [Labels](https://drive.google.com/file/d/10rW25jGSx4bpKy-V_bMdEQAP8xjarVTV/view?usp=sharing)
