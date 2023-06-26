@@ -7,7 +7,7 @@ by [Ioannis Georgiades]()
 we provide a notebook, that was created on Colab, please adjust the
 CUDA settings and Python version to match the projects requirements.
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](Conditional_Poisson_Flow_Generative_Models.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](Conditional_Poisson_Flow.ipynb)
 ---
 
 We propose a new **Conditional** Poisson flow generative model (**CoPFGM**) that extends the PFGM [repository](https://github.com/Newbeeer/Poisson_flow) and allows for conditional image sampling, provided proper label
