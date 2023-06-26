@@ -10,12 +10,17 @@ We propose a new **Conditional** Poisson flow generative model (**CoPFGM**) that
 dataset and configured model. Currently the repository supports the following datasets:
 
 * **MNIST** : Common dataset of handwritten digits provided by Tensorflow Datasets
-* **Dilbert - Faces** : Custom dataset of Dilbert comic strips faces
+* **Dilbert - Faces** : Custom dataset of Dilbert comic strips faces. Dataset not publicly available. But the model to generate is provided.
 
 
 Experimentally, CoPFGM achieves the conditional behavior by introducing the
 label information of each image during training and sampling by augmenting 
-.
+the class information to the color channels themselves, and enhancing the
+sampling wquality with an updated loss function that uses the Cross Entropy Loss of the images during training.
+
+<left><img src="assets/overall_architecture.png" width="45%" /></left>
+<right><img src="assets/augmented_channels.png" width=52%/></right>
+
 
 ---
 
@@ -92,7 +97,7 @@ python3 hyper-parameters.py
 
 ## Checkpoints
 
-Please place the pretrained checkpoints under the directory `workdir/checkpoints`, e.g., `CoPFGM_MNIST/checkpoints`.  
+Please place the pretrained checkpoints under the directory `workdir/checkpoints`, e.g., `CoPFGM_MNIST/checkpoints` or use the provided Colab notebook to fetch them.
 
 To generate and evaluate the FID/IS of  (10k) samples of the CoPFGM you could execute:
 
@@ -117,28 +122,32 @@ to adjust also in the config the
 ... --config.eval.begin_ckpt x --config.eval.end_ckpt y
 ```
 
-All checkpoints are provided in this [Google drive folder](https://drive.google.com/drive/folders/1v4u0OhZ0rxjgch51pZLySztMQATQQOeK?usp=sharing).
-
-| Dataset              | Checkpoint path                                              |    Invertible?     |  IS  |  FID  | NFE (RK45) |
-| -------------------- | :----------------------------------------------------------- | :----------------: | :--: | :---: | :--------: |
-| CIFAR-10             | [`poisson/cifar10_ddpmpp/`](https://drive.google.com/drive/folders/1UBRMPrABFoho4_laa4VZW733RJ0H_TI0?usp=sharing) | :heavy_check_mark: | 9.65 | 2.48  |    ~104    |
-| CIFAR-10             | [`poisson/cifar10_ddpmpp_deep/`](https://drive.google.com/file/d/1BeJGD0WP230u8nkHEWqywOvhH2_5F-Q0/view?usp=sharing) | :heavy_check_mark: | 9.68 | 2.35  |    ~110    |
-| LSUN bedroom $256^2$ | [`poisson/bedroom_ddpmpp/`](https://drive.google.com/drive/folders/1uFmlcBTQmUI_ZfyUiYoR54H4V2uBsuS7?usp=sharing) | :heavy_check_mark: |  -   | 13.66 |    ~122    |
-| CelebA $64^2$        | [`poisson/celeba_ddpmpp/`](https://drive.google.com/drive/folders/1LjplqjwIfZbp6LeK3_M2rIW-CaVhgn6p?usp=sharing) | :heavy_check_mark: |  -   | 3.68  |    ~110    |
+| Dataset              | Checkpoint path                                                   |  IS  |  FID  | NFE (RK45) |
+| -------------------- | :----------------------------------------------------------- | :----------------: | :--:  | :--------: |
+| MNIST| [`poisson/pretrained_mnist/`](https://drive.google.com/file/d/1Ei2r1r9Tu0iFUTXMmgYhadXhTwhOlqhK/view?usp=sharing) | 1.79 | 313.64  |    ~104    |
+| Dilbert| [`poisson/pretrained_dilbert/`](https://drive.google.com/file/d/1vgxw1zRrG6jAQIJj02WOGahCcJPWMbHk/view?usp=sharing) | 2.59 | 149.30  |    ~110    |
 
 
+## FID statistics
 
-### FID statistics
+Please find the statistics for FID scores in the following links and save them under assets folder, or use the provided Colab notebook to fetch them.
 
-Please find the statistics for FID scores in the following links:
+[Dilbert](https://drive.google.com/file/d/1Q6tQ7sSpGLEL7lwnkX2ThMr84ws5vyC3/view?usp=sharing),  [MNIST](https://drive.google.com/file/d/1hecVSJMK0Ga4kbjdw0rkiJ3p-MX6Lnlk/view?usp=sharing)
 
-[CIFAR-10](https://drive.google.com/file/d/1YyympxZ95l6_ane0TxYt94yqeiGcOBNG/view?usp=sharing),  [CelebA 64](https://drive.google.com/file/d/1dzSsmBvJOjDy12VzdypWDVYBF8b9yRkm/view?usp=sharing), [LSUN bedroom 256](https://drive.google.com/file/d/16zTW5DhwmK4Hl-Vhez9LDyqN-CXi4Lhi/view?usp=sharing)
+## Dilbert Dataset (ONLY FOR THESIS COMMITTEE)
 
+You can downaload the Dilbert images and labels from the following link:
 
+[Images](https://drive.google.com/drive/folders/1cye_l2ultb34WQuvwiYHeSn_1RHZnjJ0?usp=sharing) ,
+[Labels](https://drive.google.com/file/d/10rW25jGSx4bpKy-V_bMdEQAP8xjarVTV/view?usp=sharing)
 
+And again put the entire folder and the csv file under the assets folder. Or
+use the provided Colab notebook to fetch them.
+## Results
 
+<center><img src="assets/dilbert_combined.png" /></center>
+<center><img src="assets/mnist_combined.png" /></center>
 
-<center><img src="assets/pfgm_cat.gif" width="750" height="250"/></center>
 
 
 
