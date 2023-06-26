@@ -29,7 +29,7 @@ def get_config():
   training.gamma = 5
   training.restrict_M = True
   training.tau = 0.03
-  training.snapshot_freq = 500
+  training.snapshot_freq = 10000
   training.model = 'ddpmpp'
   training.M = 226
   training.beta = 0.5
