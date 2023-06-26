@@ -14,7 +14,6 @@
 # limitations under the License.
 
 # Lint as: python3
-"""Training DDPM++ on CIFAR-10 with PFGM."""
 from configs.default_mnist_configs import get_default_configs
 
 
@@ -31,7 +30,7 @@ def get_config():
   training.tau = 0.03
   training.snapshot_freq = 500
   training.model = 'ddpmpp'
-  training.M = 226
+  training.M = 291
   training.beta = 0.5
   training.grace_period = 2500
 
@@ -53,9 +52,9 @@ def get_config():
   #sampling.ode_solver = 'forward_euler'
   #sampling.ode_solver = 'improved_euler'
   sampling.N = 100
-  sampling.z_max = 7
+  sampling.z_max = 40
   sampling.z_min = 1e-3
-  sampling.upper_norm = 441
+  sampling.upper_norm = 3000
   # verbose
   sampling.vs = False
   sampling.target = 0
