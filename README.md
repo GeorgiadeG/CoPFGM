@@ -4,6 +4,10 @@ Pytorch implementation of the CoPFGM 2023 paper [include paper link]
 
 by [Ioannis Georgiades]()
 
+we provide a notebook, that was created on Colab, please adjust the
+CUDA settings and Python version to match the projects requirements.
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](Conditional_Poisson_Flow_Generative_Models.ipynb)
 ---
 
 We propose a new **Conditional** Poisson flow generative model (**CoPFGM**) that extends the PFGM [repository](https://github.com/Newbeeer/Poisson_flow) and allows for conditional image sampling, provided proper label
@@ -125,7 +129,7 @@ to adjust also in the config the
 | Dataset              | Checkpoint path                                                   |  IS  |  FID  | NFE (RK45) |
 | -------------------- | :----------------------------------------------------------- | :----------------: | :--:  | :--------: |
 | MNIST| [`poisson/pretrained_mnist/`](https://drive.google.com/file/d/1Ei2r1r9Tu0iFUTXMmgYhadXhTwhOlqhK/view?usp=sharing) | 1.79 | 313.64  |    ~104    |
-| Dilbert| [`poisson/pretrained_dilbert/`](https://drive.google.com/file/d/1vgxw1zRrG6jAQIJj02WOGahCcJPWMbHk/view?usp=sharing) | 2.59 | 149.30  |    ~110    |
+| Dilbert| [`poisson/pretrained_dilbert/`](https://drive.google.com/file/d/1vgxw1zRrG6jAQIJj02WOGahCcJPWMbHk/view?usp=sharing) | 2.59 | 149.30  |    ~122    |
 
 
 ## FID statistics
