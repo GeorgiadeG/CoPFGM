@@ -175,12 +175,13 @@ def get_dataset(config, uniform_dequantization=False, evaluation=False, dilbert_
       return img
   
   elif config.data.dataset == 'dilbert':
-    current_dir = "/content/drive/MyDrive/"
-    csv_file = os.path.join(current_dir, 'modified_labels_1.csv')
-    root_dir = os.path.join(current_dir, 'face_images_labeled/')
+    current_dir = os.getcwd()
+    csv_file = os.path.join(current_dir, 'assets/modified_labels_1.csv')
+    root_dir = os.path.join(current_dir, 'assets/face_images_labeled/')
     dataset_builder = FaceImagesDataset(csv_file, root_dir)
 
   elif config.data.dataset == 'dilbert_large':
+    raise NotImplementedError("The model is not yet trained on Dilbert Large Dataset. Keep an eye on github for updates.")
     current_dir = "/content/drive/MyDrive/"
     root_dir = os.path.join(current_dir, 'W7-captioned/')
     dataset_builder = DilbertLargeDataset(root_dir)
