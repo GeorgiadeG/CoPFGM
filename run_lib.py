@@ -571,12 +571,22 @@ def evaluate(config,
       all_pools = np.concatenate(all_pools, axis=0)[:config.eval.num_samples]
 
       if config.data.dataset == 'dilbert':
-        with np.load('/content/drive/MyDrive/real_dilbert_statistics.npz') as data:
+        # Get current directory
+        cdw = os.getcwd()
+        # Change directory to current / assets
+        dir = os.path.join(cdw, 'assets/real_dilbert_statistics.npz')
+        # with np.load('/content/drive/MyDrive/real_dilbert_statistics.npz') as data:
+        with np.load(dir) as data:
           data_pools = data['pool_3']
         # Reshape to 2D if necessary
         data_pools = data_pools.reshape(data_pools.shape[0], -1)
       elif config.data.dataset == 'MNIST':
-        with np.load('/content/drive/MyDrive/real_mnist_statistics.npz') as data:
+        # Get current directory
+        cdw = os.getcwd()
+        # Change directory to current / assets
+        dir = os.path.join(cdw, 'assets/real_mnist_statistics.npz')
+        # with np.load('/content/drive/MyDrive/real_mnist_statistics.npz') as data:
+        with np.load(dir) as data:
           data_pools = data['pool_3']
         # Reshape to 2D if necessary
         data_pools = data_pools.reshape(data_pools.shape[0], -1)
