@@ -148,15 +148,14 @@ Please find the statistics for FID scores in the following links and save them u
 ### If used please cite our work
 
 ```bibtex
-@misc{georgiades2023controlling,
-  author = {Georgiades, I.},
-  title = {Controlling Poisson Flow Generative Model: Implementing a Class Conditional Generative Model},
+@misc{igeorgiades2023copfgm,
+  author = {igeorgiades},
+  title = {Conditional Poisson Flow Generative Models},
   year = {2023},
-  month = {6},
-  url = {http://resolver.tudelft.nl/uuid:fcf831b5-2bc3-4016-9252-63283499930d},
-  publisher = {TU Delft Repositories},
-  howpublished = {Online}
+  url = {https://github.com/username/CoPFGM},
+  note = {GitHub repository}
 }
+
 ```
 
 
