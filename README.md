@@ -150,7 +150,20 @@ use the provided Colab notebook to fetch them.
 ## Results
 
 <center><img src="assets/dilbert_combined.png" /></center>
-<center><img src="assets/mnist_combined.png" /></center>
+
+### If used please cite our work
+
+```bibtex
+@misc{georgiades2023controlling,
+  author = {Georgiades, I.},
+  title = {Controlling Poisson Flow Generative Model: Implementing a Class Conditional Generative Model},
+  year = {2023},
+  month = {6},
+  url = {http://resolver.tudelft.nl/uuid:fcf831b5-2bc3-4016-9252-63283499930d},
+  publisher = {TU Delft Repositories},
+  howpublished = {Online}
+}
+```
 
 
 
