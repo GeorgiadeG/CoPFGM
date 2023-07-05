@@ -138,15 +138,9 @@ Please find the statistics for FID scores in the following links and save them u
 
 [Dilbert](https://drive.google.com/file/d/1Q6tQ7sSpGLEL7lwnkX2ThMr84ws5vyC3/view?usp=sharing),  [MNIST](https://drive.google.com/file/d/1hecVSJMK0Ga4kbjdw0rkiJ3p-MX6Lnlk/view?usp=sharing)
 
-## Dilbert Dataset (ONLY FOR THESIS COMMITTEE)
+## Dilbert Dataset (not publicly aviailable)
 
-They are also provided in the repository, but here are the external links for the Dilbert dataset.
 
-[Images](https://drive.google.com/drive/folders/1cye_l2ultb34WQuvwiYHeSn_1RHZnjJ0?usp=sharing) ,
-[Labels](https://drive.google.com/file/d/10rW25jGSx4bpKy-V_bMdEQAP8xjarVTV/view?usp=sharing)
-
-And again put the entire folder and the csv file under the assets folder. Or
-use the provided Colab notebook to fetch them.
 ## Results
 
 <center><img src="assets/dilbert_combined.png" /></center>
