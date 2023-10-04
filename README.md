@@ -1,6 +1,6 @@
 # Conditional Poisson Flow Generative Models
 
-Pytorch implementation of the CoPFGM 2023 paper [include paper link](https://repository.tudelft.nl/islandora/object/uuid%3Afcf831b5-2bc3-4016-9252-63283499930d)
+Pytorch implementation of the CoPFGM 2023 [paper](https://repository.tudelft.nl/islandora/object/uuid%3Afcf831b5-2bc3-4016-9252-63283499930d)
 
 by [Ioannis Georgiades]()
 
